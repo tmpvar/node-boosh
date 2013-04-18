@@ -13,7 +13,7 @@ using namespace node;
 
 GLuint  texture[1], tex;
 int width = 640, height = 480;
-GLFWwindow *window;
+
 
 Handle<Value> CreateWindow(const Arguments& args) {
   HandleScope scope;
@@ -29,7 +29,7 @@ Handle<Value> CreateWindow(const Arguments& args) {
   height = 480;
 
   /* Create a windowed mode window and its OpenGL context */
-  window = glfwCreateWindow(640, 480, "BOOSH!", NULL, NULL);
+  GLFWwindow *window = glfwCreateWindow(640, 480, "BOOSH!", NULL, NULL);
   if (!window) {
     glfwTerminate();
     return scope.Close(Undefined());
@@ -50,7 +50,8 @@ Handle<Value> CreateWindow(const Arguments& args) {
   gluOrtho2D(0, width, 0, height);
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
-  return scope.Close(String::New("world"));
+
+  return scope.Close(External::Wrap(window));
 }
 
 
@@ -70,6 +71,21 @@ Handle<Value> SetBuffer(const Arguments& args) {
 
 Handle<Value> Flush(const Arguments& args) {
   HandleScope scope;
+  GLFWwindow * w = reinterpret_cast<GLFWwindow *>(External::Unwrap(args[0]));
+
+
+  glfwMakeContextCurrent(w);
+
+
+  Canvas *canvas = ObjectWrap::Unwrap<Canvas>(args[1]->ToObject());
+
+  glGenTextures(1, &texture[0]);
+  glBindTexture(GL_TEXTURE_2D, texture[0]);
+  glTexImage2D(GL_TEXTURE_2D, 0, 3, 640, 480, 0, GL_BGRA, GL_UNSIGNED_BYTE, canvas->data());
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
+  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
+
+
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glLoadIdentity();
@@ -89,7 +105,9 @@ Handle<Value> Flush(const Arguments& args) {
   glEnd();
   // glFinish();
   //glFlush();
-  glfwSwapBuffers(window);
+
+  glfwSwapBuffers(w);
+  glfwPollEvents();
   glDeleteTextures(1, &texture[0]);
   return scope.Close(Undefined());
 }

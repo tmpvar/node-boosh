@@ -16,8 +16,8 @@ function Window(options) {
 
 
   EventEmitter.call(this);
-
-  if (!binding.createWindow()) {
+  this._window = binding.createWindow();
+  if (!this._window) {
     return;
   }
 
@@ -31,9 +31,9 @@ Window.prototype.flush = function() {
   // var id = this.context.getImageData(0, 0, 640, 480);
   // var b = new Buffer(id.data);
   // delete id;
-  binding.setBuffer(this.canvas);
+//  binding.setBuffer(this.canvas);
 //  delete b;
-  binding.flush();
+  binding.flush(this._window, this.canvas);
 };
 
 
@@ -64,33 +64,52 @@ module.exports.createWindow = function(options) {
   return ret;
 };
 
-var w = module.exports.createWindow();
-console.log(w);
-var ctx = w.getContext('2d');
-ctx.fillStyle = 'red';
 
-var x = 0, xv = 1, y = 0, yv = 1, r = 0;
+var contexts = [];
+
+for (var i=0; i<1; i++) {
+  var context = {};
+
+  context.window = module.exports.createWindow();
+  context.ctx = context.window.getContext('2d');
+  context.x = 0;
+  context.xv = 1;
+  context.y = 0;
+  context.yv = 1;
+
+  context.color = 'rgba(' + [
+    Math.floor(Math.random()*255),
+    Math.floor(Math.random()*255),
+    Math.floor(Math.random()*255),
+    1
+  ].join(',') + ')';
+
+  contexts.push(context);
+}
+
 var timer = setTimeout(function tick() {
-  ctx.clearRect(0,0,640,480)
-  ctx.fillStyle = 'red';
-  r+=.01;
-  x+=xv;
-  y+=yv;
+  contexts.forEach(function(context) {
 
-  ctx.save();
-    ctx.translate(x, y);
-    ctx.fillRect(0, 0, 100, 100);
-  ctx.restore();
+    context.ctx.clearRect(0,0,640,480)
+    context.ctx.fillStyle = context.color;
+    context.x+=context.xv;
+    context.y+=context.yv;
 
-  if (y > 480-100 || y < 0) {
-    yv = -yv;
-  }
+    context.ctx.save();
+      context.ctx.translate(context.x, context.y);
+      context.ctx.fillRect(0, 0, 100, 100);
+    context.ctx.restore();
 
-  if (x > 640-100 || x < 0) {
-    xv = -xv;
-  }
+    if (context.y > 480-100 || context.y < 0) {
+      context.yv = -context.yv;
+    }
 
-  w.flush();
+    if (context.x > 640-100 || context.x < 0) {
+      context.xv = -context.xv;
+    }
+
+    context.window.flush();
+  });
   process.nextTick(tick);
 }, 1000/40);
 
