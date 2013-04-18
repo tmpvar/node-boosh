@@ -28,15 +28,20 @@
 //
 //========================================================================
 
-#include <GL/glfw.h>
+#include <GL/glfw3.h>
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
+#ifdef _MSC_VER
+#define strdup(x) _strdup(x)
+#endif
+
 typedef struct Joystick
 {
     GLboolean present;
+    char* name;
     float* axes;
     unsigned char* buttons;
     int axis_count;
@@ -44,10 +49,14 @@ typedef struct Joystick
 } Joystick;
 
 static Joystick joysticks[GLFW_JOYSTICK_LAST - GLFW_JOYSTICK_1 + 1];
-
 static int joystick_count = 0;
 
-static void window_size_callback(int width, int height)
+static void error_callback(int error, const char* description)
+{
+    fprintf(stderr, "Error: %s\n", description);
+}
+
+static void window_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
@@ -95,11 +104,11 @@ static void draw_joystick(Joystick* j, int x, int y, int width, int height)
     }
 }
 
-static void draw_joysticks(void)
+static void draw_joysticks(GLFWwindow* window)
 {
     int i, width, height;
 
-    glfwGetWindowSize(&width, &height);
+    glfwGetWindowSize(window, &width, &height);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -131,6 +140,9 @@ static void refresh_joysticks(void)
         {
             int axis_count, button_count;
 
+            free(j->name);
+            j->name = strdup(glfwGetJoystickName(GLFW_JOYSTICK_1 + i));
+
             axis_count = glfwGetJoystickParam(GLFW_JOYSTICK_1 + i, GLFW_AXES);
             if (axis_count != j->axis_count)
             {
@@ -138,7 +150,7 @@ static void refresh_joysticks(void)
                 j->axes = realloc(j->axes, j->axis_count * sizeof(float));
             }
 
-            glfwGetJoystickPos(GLFW_JOYSTICK_1 + i, j->axes, j->axis_count);
+            glfwGetJoystickAxes(GLFW_JOYSTICK_1 + i, j->axes, j->axis_count);
 
             button_count = glfwGetJoystickParam(GLFW_JOYSTICK_1 + i, GLFW_BUTTONS);
             if (button_count != j->button_count)
@@ -151,8 +163,8 @@ static void refresh_joysticks(void)
 
             if (!j->present)
             {
-                printf("Found joystick %i with %i axes, %i buttons\n",
-                       i + 1, j->axis_count, j->button_count);
+                printf("Found joystick %i named \'%s\' with %i axes, %i buttons\n",
+                       i + 1, j->name, j->axis_count, j->button_count);
 
                 joystick_count++;
             }
@@ -163,11 +175,12 @@ static void refresh_joysticks(void)
         {
             if (j->present)
             {
+                printf("Lost joystick %i named \'%s\'\n", i + 1, j->name);
+
+                free(j->name);
                 free(j->axes);
                 free(j->buttons);
                 memset(j, 0, sizeof(Joystick));
-
-                printf("Lost joystick %i\n", i + 1);
 
                 joystick_count--;
             }
@@ -177,33 +190,36 @@ static void refresh_joysticks(void)
 
 int main(void)
 {
+    GLFWwindow* window;
+
     memset(joysticks, 0, sizeof(joysticks));
 
-    if (!glfwInit())
-    {
-        fprintf(stderr, "Failed to initialize GLFW\n");
-        exit(EXIT_FAILURE);
-    }
+    glfwSetErrorCallback(error_callback);
 
-    if (!glfwOpenWindow(640, 480, 8, 8, 8, 0, 0, 0, GLFW_WINDOW))
+    if (!glfwInit())
+        exit(EXIT_FAILURE);
+
+    window = glfwCreateWindow(640, 480, "Joystick Test", NULL, NULL);
+    if (!window)
     {
         glfwTerminate();
-
-        fprintf(stderr, "Failed to open GLFW window\n");
         exit(EXIT_FAILURE);
     }
 
-    glfwSetWindowSizeCallback(window_size_callback);
+    glfwSetWindowSizeCallback(window, window_size_callback);
+
+    glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
-    while (glfwGetWindowParam(GLFW_OPENED))
+    while (!glfwWindowShouldClose(window))
     {
         glClear(GL_COLOR_BUFFER_BIT);
 
         refresh_joysticks();
-        draw_joysticks();
+        draw_joysticks(window);
 
-        glfwSwapBuffers();
+        glfwSwapBuffers(window);
+        glfwPollEvents();
     }
 
     glfwTerminate();

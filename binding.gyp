@@ -38,16 +38,19 @@
       'conditions': [
         ['OS == "mac"', {
           'sources': [
-            'deps/glfw/lib/cocoa/cocoa_enable.m',
-            'deps/glfw/lib/cocoa/cocoa_fullscreen.m',
-            'deps/glfw/lib/cocoa/cocoa_glext.m',
-            'deps/glfw/lib/cocoa/cocoa_init.m',
-            'deps/glfw/lib/cocoa/cocoa_joystick.m',
-            'deps/glfw/lib/cocoa/cocoa_thread.c',
-            'deps/glfw/lib/cocoa/cocoa_time.m',
-            'deps/glfw/lib/cocoa/cocoa_window.m'
+            'deps/glfw/src/cocoa_clipboard.m',
+            'deps/glfw/src/cocoa_gamma.c',
+            'deps/glfw/src/cocoa_init.m',
+            'deps/glfw/src/cocoa_joystick.m',
+            'deps/glfw/src/cocoa_monitor.m',
+            'deps/glfw/src/cocoa_time.c',
+            'deps/glfw/src/cocoa_window.m',
+            'deps/glfw/src/nsgl_context.m',
           ],
-          'include_dirs' : ['deps/glfw/lib/cocoa'],
+          'include_dirs' : [
+            'deps/glfw/src',
+            'deps/glfw-support/cocoa'
+          ],
           'defines' : [
             '__MACOSX_CORE__'
           ],
@@ -64,22 +67,18 @@
       ],
 
       'include_dirs' : [
-        'deps/glfw/include',
-        'deps/glfw/lib',
+        'deps/glfw/include'
       ],
       'sources' : [
-        'deps/glfw/lib/enable.c',
-        'deps/glfw/lib/fullscreen.c',
-        'deps/glfw/lib/glext.c',
-        'deps/glfw/lib/image.c',
-        'deps/glfw/lib/init.c',
-        'deps/glfw/lib/input.c',
-        'deps/glfw/lib/joystick.c',
-        'deps/glfw/lib/stream.c',
-        'deps/glfw/lib/tga.c',
-        'deps/glfw/lib/thread.c',
-        'deps/glfw/lib/time.c',
-        'deps/glfw/lib/window.c'
+        'deps/glfw/src/clipboard.c',
+        'deps/glfw/src/context.c',
+        'deps/glfw/src/gamma.c',
+        'deps/glfw/src/init.c',
+        'deps/glfw/src/input.c',
+        'deps/glfw/src/joystick.c',
+        'deps/glfw/src/monitor.c',
+        'deps/glfw/src/time.c',
+        'deps/glfw/src/window.c'
       ]
     }
   ]

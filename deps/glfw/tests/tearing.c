@@ -28,57 +28,81 @@
 //
 //========================================================================
 
-#include <GL/glfw.h>
+#include <GL/glfw3.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 
-static void GLFWCALL window_size_callback(int width, int height)
+static int swap_interval;
+
+static void set_swap_interval(GLFWwindow* window, int interval)
+{
+    char title[256];
+
+    swap_interval = interval;
+    glfwSwapInterval(swap_interval);
+
+    sprintf(title, "Tearing detector (interval %i)", swap_interval);
+
+    glfwSetWindowTitle(window, title);
+}
+
+static void error_callback(int error, const char* description)
+{
+    fprintf(stderr, "Error: %s\n", description);
+}
+
+static void window_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
+}
+
+static void key_callback(GLFWwindow* window, int key, int action)
+{
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+        set_swap_interval(window, 1 - swap_interval);
 }
 
 int main(void)
 {
     float position;
+    GLFWwindow* window;
+
+    glfwSetErrorCallback(error_callback);
 
     if (!glfwInit())
-    {
-        fprintf(stderr, "Failed to initialize GLFW\n");
-        exit(1);
-    }
+        exit(EXIT_FAILURE);
 
-    if (!glfwOpenWindow(0, 0, 0, 0, 0, 0, 0, 0, GLFW_WINDOW))
+    window = glfwCreateWindow(640, 480, "", NULL, NULL);
+    if (!window)
     {
         glfwTerminate();
-
-        fprintf(stderr, "Failed to open GLFW window\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
-    glfwSetWindowTitle("Tearing Detector");
-    glfwSetWindowSizeCallback(window_size_callback);
-    glfwSwapInterval(1);
+    glfwMakeContextCurrent(window);
+    set_swap_interval(window, swap_interval);
 
-    glClearColor(0.f, 0.f, 0.f, 0.f);
-    glColor3f(1.f, 1.f, 1.f);
+    glfwSetWindowSizeCallback(window, window_size_callback);
+    glfwSetKeyCallback(window, key_callback);
 
     glMatrixMode(GL_PROJECTION);
     glOrtho(-1.f, 1.f, -1.f, 1.f, 1.f, -1.f);
     glMatrixMode(GL_MODELVIEW);
 
-    while (glfwGetWindowParam(GLFW_OPENED) == GL_TRUE)
+    while (!glfwWindowShouldClose(window))
     {
         glClear(GL_COLOR_BUFFER_BIT);
 
-        position = cosf(glfwGetTime() * 4.f) * 0.75f;
+        position = cosf((float) glfwGetTime() * 4.f) * 0.75f;
         glRectf(position - 0.25f, -1.f, position + 0.25f, 1.f);
 
-        glfwSwapBuffers();
+        glfwSwapBuffers(window);
+        glfwPollEvents();
     }
 
     glfwTerminate();
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
 

@@ -2,7 +2,7 @@
 #include <node_buffer.h>
 #include <v8.h>
 #include <GL/glew.h>
-#include <GL/glfw.h>
+#include <GL/glfw3.h>
 #include "uv.h"
 #include "stdio.h"
 #include <Canvas.h>
@@ -13,13 +13,14 @@ using namespace node;
 
 GLuint  texture[1], tex;
 int width = 640, height = 480;
+GLFWwindow *window;
 
 Handle<Value> CreateWindow(const Arguments& args) {
   HandleScope scope;
 
   /* Initialize the library */
   if (!glfwInit()) {
-    scope.Close(Undefined());
+    return scope.Close(Undefined());
   }
 
 
@@ -28,9 +29,13 @@ Handle<Value> CreateWindow(const Arguments& args) {
   height = 480;
 
   /* Create a windowed mode window and its OpenGL context */
-  if (!glfwOpenWindow(640, 480, 8, 8, 8, 0, 24, 0, GLFW_WINDOW)) {
-    scope.Close(Undefined());
+  window = glfwCreateWindow(640, 480, "BOOSH!", NULL, NULL);
+  if (!window) {
+    glfwTerminate();
+    return scope.Close(Undefined());
   }
+
+  glfwMakeContextCurrent(window);
 
   glewInit();
 
@@ -84,7 +89,7 @@ Handle<Value> Flush(const Arguments& args) {
   glEnd();
   // glFinish();
   //glFlush();
-  glfwSwapBuffers();
+  glfwSwapBuffers(window);
   glDeleteTextures(1, &texture[0]);
   return scope.Close(Undefined());
 }
