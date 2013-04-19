@@ -1,3 +1,4 @@
+#define BUILDING_NODE_EXTENSION
 #include <node.h>
 #include <node_buffer.h>
 #include <v8.h>
@@ -7,13 +8,12 @@
 #include "stdio.h"
 #include <Canvas.h>
 #include <PixelArray.h>
+#include "window.h"
 
 using namespace v8;
 using namespace node;
 
 GLuint  texture[1], tex;
-int width = 640, height = 480;
-
 
 Handle<Value> CreateWindow(const Arguments& args) {
   HandleScope scope;
@@ -25,11 +25,11 @@ Handle<Value> CreateWindow(const Arguments& args) {
 
 
 
-  width = 640;
-  height = 480;
+  int width = args[0]->NumberValue();
+  int height = args[1]->NumberValue();
 
   /* Create a windowed mode window and its OpenGL context */
-  GLFWwindow *window = glfwCreateWindow(640, 480, "BOOSH!", NULL, NULL);
+  GLFWwindow *window = glfwCreateWindow(width, height, "BOOSH!", NULL, NULL);
   if (!window) {
     glfwTerminate();
     return scope.Close(Undefined());
@@ -54,38 +54,40 @@ Handle<Value> CreateWindow(const Arguments& args) {
   return scope.Close(External::Wrap(window));
 }
 
+struct Obj {
+  int x;
+};
 
-Handle<Value> SetBuffer(const Arguments& args) {
+Handle<Value> CreateThing(const Arguments& args) {
   HandleScope scope;
-
-  Canvas *canvas = ObjectWrap::Unwrap<Canvas>(args[0]->ToObject());
-
-  glGenTextures(1, &texture[0]);
-  glBindTexture(GL_TEXTURE_2D, texture[0]);
-  glTexImage2D(GL_TEXTURE_2D, 0, 3, 640, 480, 0, GL_BGRA, GL_UNSIGNED_BYTE, canvas->data());
-  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-
-  return scope.Close(Undefined());
+  Obj *o = new Obj;
+  o->x = 10;
+  return scope.Close(External::Wrap(o));
 }
+
+Handle<Value> UseThing(const Arguments& args) {
+  HandleScope scope;
+  Obj *o = reinterpret_cast<Obj *>(External::Unwrap(args[0]));
+  return scope.Close(Number::New(o->x));
+}
+
 
 Handle<Value> Flush(const Arguments& args) {
   HandleScope scope;
   GLFWwindow * w = reinterpret_cast<GLFWwindow *>(External::Unwrap(args[0]));
 
+  int width, height;
+  glfwGetWindowSize(w, &width, &height);
 
   glfwMakeContextCurrent(w);
-
 
   Canvas *canvas = ObjectWrap::Unwrap<Canvas>(args[1]->ToObject());
 
   glGenTextures(1, &texture[0]);
   glBindTexture(GL_TEXTURE_2D, texture[0]);
-  glTexImage2D(GL_TEXTURE_2D, 0, 3, 640, 480, 0, GL_BGRA, GL_UNSIGNED_BYTE, canvas->data());
+  glTexImage2D(GL_TEXTURE_2D, 0, 3, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, canvas->data());
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-
-
 
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glLoadIdentity();
@@ -99,12 +101,10 @@ Handle<Value> Flush(const Arguments& args) {
 
   glBegin(GL_QUADS);
     glTexCoord2f(0.0f, 0.0f); glVertex3f( 0.0f, 0.0f,  0);
-    glTexCoord2f(1.0f, 0.0f); glVertex3f( 640.0f, 0.0f,  0);
-    glTexCoord2f(1.0f, 1.0f); glVertex3f( 640.0f,  480.0f,  0);
-    glTexCoord2f(0.0f, 1.0f); glVertex3f( 0.0f, 480.0f,  0);
+    glTexCoord2f(1.0f, 0.0f); glVertex3f( width, 0.0f,  0);
+    glTexCoord2f(1.0f, 1.0f); glVertex3f( width,  height,  0);
+    glTexCoord2f(0.0f, 1.0f); glVertex3f( 0.0f, height,  0);
   glEnd();
-  // glFinish();
-  //glFlush();
 
   glfwSwapBuffers(w);
   glfwPollEvents();
@@ -115,10 +115,13 @@ Handle<Value> Flush(const Arguments& args) {
 void init(Handle<Object> exports) {
   exports->Set(String::NewSymbol("createWindow"),
       FunctionTemplate::New(CreateWindow)->GetFunction());
-  exports->Set(String::NewSymbol("setBuffer"),
-      FunctionTemplate::New(SetBuffer)->GetFunction());
   exports->Set(String::NewSymbol("flush"),
       FunctionTemplate::New(Flush)->GetFunction());
+
+  assert(glfwInit());
+
+  Window::Init(exports);
+
 }
 
 NODE_MODULE(boosh, init)

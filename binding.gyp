@@ -12,7 +12,8 @@
         'node_modules/canvas/binding.gyp:canvas'
       ],
       'sources' : [
-        'src/binding.cc'
+        'src/binding.cc',
+        'src/window.cc'
       ],
       'include_dirs' : [
         'deps/glfw/include',
