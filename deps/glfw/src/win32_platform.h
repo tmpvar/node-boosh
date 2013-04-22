@@ -155,7 +155,7 @@ typedef struct _GLFWwindowWin32
     GLboolean           cursorCentered;
     GLboolean           cursorInside;
     GLboolean           cursorHidden;
-    int                 oldCursorX, oldCursorY;
+    double              oldCursorX, oldCursorY;
 } _GLFWwindowWin32;
 
 
@@ -247,7 +247,7 @@ int _glfwAnalyzeContext(const _GLFWwindow* window,
                         const _GLFWfbconfig* fbconfig);
 
 // Fullscreen support
-int _glfwSetVideoMode(_GLFWmonitor* monitor, const GLFWvidmode* mode);
+GLboolean _glfwSetVideoMode(_GLFWmonitor* monitor, const GLFWvidmode* desired);
 void _glfwRestoreVideoMode(_GLFWmonitor* monitor);
 
 

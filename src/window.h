@@ -9,13 +9,13 @@
 
 #define OBJECT_METHOD(name) static Handle<Value> name(const Arguments& args);
 
-#ifndef GLFW_INCLUDE_GLU
+
 #define GLFW_INCLUDE_GLU 1
-#endif
 
 #include <node.h>
 #include <Canvas.h>
 #include <GL/glfw3.h>
+#include <uv.h>
 
 using namespace v8;
 
@@ -26,8 +26,8 @@ class Window : public node::ObjectWrap {
 
   Canvas *canvas;
   Persistent<Object> canvasHandle;
-  GLFWwindow *window;
-  int width, height;
+  GLFWwindow *handle;
+  int width, height, x, y;
   GLuint surfaceTexture[1];
   Persistent<Function> eventCallback;
   void setupSize();
@@ -36,7 +36,7 @@ class Window : public node::ObjectWrap {
   Window(int width, int height, const char *title);
   ~Window();
 
-
+  static uv_idle_t *idler;
 
 
   static Persistent<Function> constructor;
@@ -48,6 +48,7 @@ class Window : public node::ObjectWrap {
   OBJECT_METHOD(get2dContext)
   OBJECT_METHOD(flush)
   OBJECT_METHOD(eventHandler)
+  OBJECT_METHOD(setTitle)
 };
 
 #endif

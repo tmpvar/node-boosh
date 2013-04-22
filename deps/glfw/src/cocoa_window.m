@@ -48,6 +48,13 @@
 
 @implementation GLFWWindowDelegate
 
+static void centerCursor(_GLFWwindow *window)
+{
+    int width, height;
+    _glfwPlatformGetWindowSize(window, &width, &height);
+    _glfwPlatformSetCursorPos(window, width / 2.0, height / 2.0);
+}
+
 - (id)initWithGlfwWindow:(_GLFWwindow *)initWindow
 {
     self = [super init];
@@ -70,6 +77,10 @@
     int width, height;
     _glfwPlatformGetWindowSize(window, &width, &height);
     _glfwInputWindowSize(window, width, height);
+    _glfwInputWindowDamage(window);
+
+    if (window->cursorMode == GLFW_CURSOR_CAPTURED)
+        centerCursor(window);
 }
 
 - (void)windowDidMove:(NSNotification *)notification
@@ -79,6 +90,9 @@
     int x, y;
     _glfwPlatformGetWindowPos(window, &x, &y);
     _glfwInputWindowPos(window, x, y);
+
+    if (window->cursorMode == GLFW_CURSOR_CAPTURED)
+        centerCursor(window);
 }
 
 - (void)windowDidMiniaturize:(NSNotification *)notification
@@ -94,6 +108,9 @@
 - (void)windowDidBecomeKey:(NSNotification *)notification
 {
     _glfwInputWindowFocus(window, GL_TRUE);
+
+    if (window->cursorMode == GLFW_CURSOR_CAPTURED)
+        centerCursor(window);
 }
 
 - (void)windowDidResignKey:(NSNotification *)notification
@@ -305,6 +322,20 @@ static int convertMacKeyCode(unsigned int macKeyCode)
 
 @implementation GLFWContentView
 
++ (void)initialize
+{
+    if (self == [GLFWContentView class])
+    {
+        if (_glfw.ns.cursor == nil)
+        {
+            NSImage* data = [[NSImage alloc] initWithSize:NSMakeSize(1, 1)];
+            _glfw.ns.cursor = [[NSCursor alloc] initWithImage:data
+                                                      hotSpot:NSZeroPoint];
+            [data release];
+        }
+    }
+}
+
 - (id)initWithGlfwWindow:(_GLFWwindow *)initWindow
 {
     self = [super init];
@@ -448,20 +479,20 @@ static int convertMacKeyCode(unsigned int macKeyCode)
 
 - (void)flagsChanged:(NSEvent *)event
 {
-    int mode, key;
+    int action, key;
     unsigned int newModifierFlags =
         [event modifierFlags] & NSDeviceIndependentModifierFlagsMask;
 
     if (newModifierFlags > window->ns.modifierFlags)
-        mode = GLFW_PRESS;
+        action = GLFW_PRESS;
     else
-        mode = GLFW_RELEASE;
+        action = GLFW_RELEASE;
 
     window->ns.modifierFlags = newModifierFlags;
 
     key = convertMacKeyCode([event keyCode]);
     if (key != -1)
-      _glfwInputKey(window, key, mode);
+      _glfwInputKey(window, key, action);
 }
 
 - (void)keyUp:(NSEvent *)event
@@ -476,6 +507,12 @@ static int convertMacKeyCode(unsigned int macKeyCode)
 
     if (fabs(deltaX) > 0.0 || fabs(deltaY) > 0.0)
         _glfwInputScroll(window, deltaX, deltaY);
+}
+
+- (void)resetCursorRects
+{
+    [self discardCursorRects];
+    [self addCursorRect:[self bounds] cursor:_glfw.ns.cursor];
 }
 
 @end
@@ -690,6 +727,7 @@ static GLboolean createWindow(_GLFWwindow* window,
     [window->ns.object setContentView:window->ns.view];
     [window->ns.object setDelegate:window->ns.delegate];
     [window->ns.object setAcceptsMouseMovedEvents:YES];
+    [window->ns.object disableCursorRects];
     [window->ns.object center];
 
     if ([window->ns.object respondsToSelector:@selector(setRestorable:)])
@@ -733,13 +771,6 @@ int _glfwPlatformCreateWindow(_GLFWwindow* window,
         return GL_FALSE;
     }
 
-    // Mac OS X needs non-zero color size, so set resonable values
-    int colorBits = fbconfig->redBits + fbconfig->greenBits + fbconfig->blueBits;
-    if (colorBits == 0)
-        colorBits = 24;
-    else if (colorBits < 15)
-        colorBits = 15;
-
     // Don't use accumulation buffer support; it's not accelerated
     // Aux buffers probably aren't accelerated either
 
@@ -753,9 +784,7 @@ int _glfwPlatformCreateWindow(_GLFWwindow* window,
 
     if (wndconfig->monitor)
     {
-        int bpp = colorBits + fbconfig->alphaBits;
-
-        if (!_glfwSetVideoMode(window->monitor, &window->videoMode.width, &window->videoMode.height, &bpp))
+        if (!_glfwSetVideoMode(window->monitor, &window->videoMode))
             return GL_FALSE;
 
         _glfwPlatformShowWindow(window);
@@ -913,16 +942,24 @@ void _glfwPlatformSetCursorPos(_GLFWwindow* window, double x, double y)
 
 void _glfwPlatformSetCursorMode(_GLFWwindow* window, int mode)
 {
+    // Unhide the cursor if the last mode was CAPTURED.
+    if (window->cursorMode == GLFW_CURSOR_CAPTURED) {
+        CGAssociateMouseAndMouseCursorPosition(true);
+    }
+
     switch (mode)
     {
         case GLFW_CURSOR_NORMAL:
-            [NSCursor unhide];
-            CGAssociateMouseAndMouseCursorPosition(true);
+            [window->ns.object disableCursorRects];
+            [window->ns.object invalidateCursorRectsForView:window->ns.view];
             break;
         case GLFW_CURSOR_HIDDEN:
+            [window->ns.object enableCursorRects];
+            [window->ns.object invalidateCursorRectsForView:window->ns.view];
             break;
         case GLFW_CURSOR_CAPTURED:
-            [NSCursor hide];
+            [window->ns.object enableCursorRects];
+            [window->ns.object invalidateCursorRectsForView:window->ns.view];
             CGAssociateMouseAndMouseCursorPosition(false);
             break;
     }

@@ -29,23 +29,45 @@ options ={
   }
 
   this._window.eventHandler(function(raw) {
-
-
+    //raw._defaultPrevented = true;
   }.bind(this));
 
 
-  this.width = options.width;
-  this.height = options.height;
+  // this.width = options.width;
+  // this.height = options.height;
 
   this.canvas = new Canvas(options.width, options.height);
-  console.log(this.canvas.width, this.canvas.height);
 }
 
-//util.inherits(Window, EventEmitter);
+
+util.inherits(Window, EventEmitter);
 
 Window.prototype.flush = function() {
   this._window.flush();
 };
+
+Object.defineProperty(Window.prototype, 'width', {
+  get: function() {
+    return this._window.getRect().width;
+  },
+  configurable: false
+});
+
+Object.defineProperty(Window.prototype, 'height', {
+  get: function() {
+    return this._window.getRect().height;
+  },
+  configurable: false
+});
+
+Object.defineProperty(Window.prototype, 'title', {
+  set: function(v) {
+    return this._window.setTitle(v);
+  },
+  configurable: false
+});
+
+
 
 Window.prototype.getContext = function(type) {
   if (this.context) {
@@ -109,30 +131,35 @@ for (var i=0; i<1; i++) {
 
 var timer = setTimeout(function tick() {
   contexts.forEach(function(context) {
+    context.ctx.fillStyle = '#aaa';//context.color;
+    context.ctx.fillRect(0,0,context.window.width,context.window.height)
 
-    context.ctx.clearRect(0,0,context.window.width,context.window.height)
-    context.ctx.fillStyle = 'red';//context.color;
+    context.ctx.fillStyle = '#000';//context.color;
     context.x+=context.xv;
     context.y+=context.yv;
+
+    context.window.title = context.x + ',' + context.y;
 
     context.ctx.save();
       context.ctx.translate(context.x, context.y);
       context.ctx.fillRect(0, 0, 100, 100);
     context.ctx.restore();
 
-    if (context.y > context.window.height-100 || context.y < 0) {
-      context.yv = -context.yv;
+    if (context.y > context.window.height-100) {
+      context.yv = -Math.abs(context.yv);
+    } else if (context.y < 0) {
+      context.yv = Math.abs(context.yv)
     }
 
-    if (context.x > context.window.width-100 || context.x < 0) {
-      context.xv = -context.xv;
+    if (context.x > context.window.width-100) {
+      context.xv = -Math.abs(context.xv);
+    } else if (context.x < 0) {
+      context.xv = Math.abs(context.xv)
     }
 
     context.window.flush();
   });
   process.nextTick(tick);
 }, 1000/40);
-setTimeout(function() {
-  contexts[0].window._window.resizeTo(100, 100);
-}, 2000);
+
 

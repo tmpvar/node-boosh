@@ -106,7 +106,7 @@ void _glfwInputMonitorChange(void)
             if (_glfw.monitors[j] == NULL)
                 continue;
 
-            if (strcmp(monitors[i]->name, _glfw.monitors[j]->name) == 0)
+            if (_glfwPlatformIsSameMonitor(monitors[i], _glfw.monitors[j]))
             {
                 // This monitor was connected before, so re-use the existing
                 // monitor object to preserve its address and user pointer
@@ -289,10 +289,14 @@ GLFWAPI const char* glfwGetMonitorName(GLFWmonitor* handle)
     return monitor->name;
 }
 
-GLFWAPI void glfwSetMonitorCallback(GLFWmonitorfun cbfun)
+GLFWAPI GLFWmonitorfun glfwSetMonitorCallback(GLFWmonitorfun cbfun)
 {
-    _GLFW_REQUIRE_INIT();
+    GLFWmonitorfun previous;
+    _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
+
+    previous = _glfw.monitorCallback;
     _glfw.monitorCallback = cbfun;
+    return previous;
 }
 
 GLFWAPI const GLFWvidmode* glfwGetVideoModes(GLFWmonitor* handle, int* count)

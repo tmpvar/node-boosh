@@ -9,6 +9,9 @@ using namespace v8;
 // Event processors
 //
 
+void uv_gui_idler(uv_idle_t* handle, int status) {
+  glfwPollEvents();
+}
 
 void APIENTRY resizedCallback(GLFWwindow* window,int width,int height) {
 
@@ -18,39 +21,73 @@ void APIENTRY resizedCallback(GLFWwindow* window,int width,int height) {
   event->Set(String::NewSymbol("type"), String::NewSymbol("resize"));
   event->Set(String::NewSymbol("width"), Number::New(width));
   event->Set(String::NewSymbol("height"), Number::New(height));
-
-  win->width = width;
-  win->height = height;
+  event->Set(String::NewSymbol("_defaultPrevented"), Boolean::New(false));
 
   const unsigned argc = 1;
   Local<Value> argv[argc] = { event };
   win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
 
-  win->setupSize();
-
+  if (!event->Get(String::NewSymbol("_defaultPrevented"))->BooleanValue()) {
+    win->width = width;
+    win->height = height;
+    win->setupSize();
+  } else {
+    glfwSetWindowSize(win->handle, win->width, win->height);
+    glfwSetWindowPos(win->handle, win->x, win->y);
+  }
 }
 
+void APIENTRY movedCallback(GLFWwindow* window,int x,int y) {
+
+  Window *win = (Window *)glfwGetWindowUserPointer(window);
+  Local<Object> event = Object::New();
+  event->Set(String::NewSymbol("type"), String::NewSymbol("move"));
+  event->Set(String::NewSymbol("x"), Number::New(x));
+  event->Set(String::NewSymbol("y"), Number::New(y));
+  event->Set(String::NewSymbol("_defaultPrevented"), Boolean::New(false));
+
+  const unsigned argc = 1;
+  Local<Value> argv[argc] = { event };
+  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+
+  if (!event->Get(String::NewSymbol("_defaultPrevented"))->BooleanValue()) {
+    win->x = x;
+    win->y = y;
+  } else {
+    glfwSetWindowPos(win->handle, win->x, win->y);
+  }
+};
 
 
-
+uv_idle_t * Window::idler = NULL;
 
 Window::Window(int width, int height, const char *title)
   : ObjectWrap()
 {
   this->width = width;
   this->height = height;
-  this->window = glfwCreateWindow(width, height, title, NULL, NULL);
+  this->handle = glfwCreateWindow(width, height, title, NULL, NULL);
 
-  glfwSetWindowUserPointer(this->window, this);
+  glfwGetWindowPos(this->handle, &this->x, &this->y);
 
-  glfwSetWindowSizeCallback(this->window, &resizedCallback);
+  glfwSetWindowUserPointer(this->handle, this);
 
+  glfwSetWindowSizeCallback(this->handle, &resizedCallback);
+  glfwSetWindowPosCallback(this->handle, &movedCallback);
+
+
+  if (Window::idler == NULL) {
+    // TODO: how to not leak?
+    Window::idler = (uv_idle_t *)malloc(sizeof(uv_idle_t));
+    uv_idle_init(uv_default_loop(), Window::idler);
+    uv_idle_start(Window::idler, uv_gui_idler);
+  }
 }
 
 Window::~Window() {
-  if (this->window) {
-    glfwDestroyWindow(this->window);
-    this->window = NULL;
+  if (this->handle) {
+    glfwDestroyWindow(this->handle);
+    this->handle = NULL;
   }
   glfwTerminate();
 }
@@ -70,6 +107,7 @@ void Window::Init(Handle<Object> exports) {
   NODE_PROTOTYPE_METHOD(get2dContext);
   NODE_PROTOTYPE_METHOD(flush);
   NODE_PROTOTYPE_METHOD(eventHandler);
+  NODE_PROTOTYPE_METHOD(setTitle);
 
   Persistent<Function> constructor = Persistent<Function>::New(tpl->GetFunction());
   exports->Set(String::NewSymbol("Window"), constructor);
@@ -85,9 +123,20 @@ Handle<Value> Window::eventHandler(const Arguments& args) {
   return scope.Close(Undefined());
 }
 
+
+Handle<Value> Window::setTitle(const Arguments& args) {
+  HandleScope scope;
+  Window *win = ObjectWrap::Unwrap<Window>(args.This());
+
+  String::Utf8Value title(args[0]->ToString());
+  glfwSetWindowTitle(win->handle, *title);
+
+  return scope.Close(Undefined());
+}
+
 void Window::setupSize() {
 
-  glfwMakeContextCurrent(this->window);
+  glfwMakeContextCurrent(this->handle);
   glViewport(0,0, this->width, this->height);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
@@ -138,8 +187,9 @@ Handle<Value> Window::flush(const Arguments& args) {
 
   Window *win = ObjectWrap::Unwrap<Window>(args.This());
 
-  glfwMakeContextCurrent(win->window);
+  glfwPollEvents();
 
+  glfwMakeContextCurrent(win->handle);
   glGenTextures(1, &win->surfaceTexture[0]);
   glBindTexture(GL_TEXTURE_2D, win->surfaceTexture[0]);
   glTexImage2D(GL_TEXTURE_2D, 0, 3, win->width, win->height, 0, GL_BGRA, GL_UNSIGNED_BYTE, win->canvas->data());
@@ -163,10 +213,9 @@ Handle<Value> Window::flush(const Arguments& args) {
     glTexCoord2f(0.0f, 1.0f); glVertex3f( 0.0f, win->height,  0);
   glEnd();
 
-  glfwSwapBuffers(win->window);
-  glfwPollEvents();
+  glfwSwapBuffers(win->handle);
   glDeleteTextures(1, &win->surfaceTexture[0]);
-
+  glfwPollEvents();
 
   return scope.Close(Undefined());
 }
@@ -177,8 +226,8 @@ Handle<Value> Window::getRect(const Arguments& args) {
   Window *win = ObjectWrap::Unwrap<Window>(args.This());
 
   int width, height, x, y;
-  glfwGetWindowSize(win->window, &width, &height);
-  glfwGetWindowPos(win->window, &x, &y);
+  glfwGetWindowSize(win->handle, &width, &height);
+  glfwGetWindowPos(win->handle, &x, &y);
 
   Local<Object> ret = Object::New();
   ret->Set(String::NewSymbol("x"), Number::New(x));

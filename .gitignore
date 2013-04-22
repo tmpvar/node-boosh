@@ -1,1 +1,7 @@
 build
+node_modules
+
+deps/glfw/.ninja_log
+deps/glfw/build.ninja
+deps/glfw/docs/warnings.txt
+deps/glfw/rules.ninja
