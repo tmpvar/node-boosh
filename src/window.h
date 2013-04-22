@@ -32,6 +32,7 @@ class Window : public node::ObjectWrap {
   Persistent<Function> eventCallback;
   void setupSize();
   void destroy();
+  void swapBuffers();
 
  private:
   Window(int width, int height, const char *title);
@@ -45,6 +46,7 @@ class Window : public node::ObjectWrap {
   static Handle<Value> New(const Arguments& args);
 
   OBJECT_METHOD(resizeTo)
+  OBJECT_METHOD(moveTo)
   OBJECT_METHOD(getRect)
   OBJECT_METHOD(get2dContext)
   OBJECT_METHOD(flush)

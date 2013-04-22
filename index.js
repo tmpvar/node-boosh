@@ -6,6 +6,8 @@ var defaults = require('defaults');
 var fs = require('fs');
 var NativeWindow = binding.Window;
 
+var Event = require('./lib/event');
+
 function Window(options) {
   console.log(options);
   options = defaults(options || {}, {
@@ -23,19 +25,19 @@ function Window(options) {
     return;
   }
 
+  // Event dispatcher
   this._window.eventHandler(function(raw) {
-    raw.preventDefault = function() {
-      raw._defaultPrevented = true;
-    };
+    raw.target = this;
+    var ev = new Event(raw.type, raw);
 
     // window.on<event> handlers
     var lower = raw.type.toLowerCase();
 
     if (typeof this['on' + lower] === 'function') {
-      this[lower](raw);
+      this[lower](ev);
     }
 
-    this.emit(raw.type, raw);
+    this.emit(raw.type, ev);
   }.bind(this));
 
   this.addEventListener = this.on;
@@ -61,30 +63,104 @@ function Window(options) {
 
 util.inherits(Window, EventEmitter);
 
+// TODO: move this into requestAnimationFrame
 Window.prototype.flush = function() {
   this._window.flush();
 };
 
-Object.defineProperty(Window.prototype, 'width', {
-  get: function() {
-    var rect = this._window.getRect();
-    if (rect) {
-      return rect.width;
-    }
-  },
-  configurable: false
+var windowPrototypeProperty = function(properties, get, set) {
+
+  if (!Array.isArray(properties)) {
+    properties = [properties];
+  }
+
+  var definition = {
+    configurable : false
+  };
+
+  if (get) {
+    definition.get = get;
+  }
+
+
+  if (set) {
+    definition.set = set;
+  }
+
+  properties.forEach(function(name) {
+    Object.defineProperty(Window.prototype, name, definition);
+  });
+
+};
+
+windowPrototypeProperty(['outerWidth', 'innerWidth'], function() {
+  var rect = this._window.getRect();
+  if (rect) {
+    return rect.width;
+  }
 });
 
-Object.defineProperty(Window.prototype, 'height', {
-  get: function() {
-    var rect = this._window.getRect();
-    if (rect) {
-      return rect.height;
-    }
-  },
-  configurable: false
+windowPrototypeProperty(['outerHeight', 'innerHeight'], function() {
+  var rect = this._window.getRect();
+  if (rect) {
+    return rect.height;
+  }
 });
 
+
+windowPrototypeProperty(['screenTop', 'screenX'], function() {
+  var rect = this._window.getRect();
+  if (rect) {
+    return rect.x;
+  }
+},
+function(v) {
+  var rect = this._window.getRect();
+  if (rect) {
+    this.moveTo(v, rect.y);
+  }
+});
+
+windowPrototypeProperty(['screenLeft', 'screenY'], function() {
+  var rect = this._window.getRect();
+  if (rect) {
+    return rect.y;
+  }
+},
+function(v) {
+  var rect = this._window.getRect();
+  if (rect) {
+    this.moveTo(rect.x, v);
+  }
+});
+
+Window.prototype.resizeTo = function(w, h) {
+  w = w || 0;
+  h = h || 0;
+console.log('resize in js: ', w, h);
+  this._window.resizeTo(w, h);
+};
+
+Window.prototype.resizeBy = function(w, h) {
+  var rect = this._window.getRect();
+  console.log('rect', rect);
+  if (rect) {
+    this.resizeTo(rect.width + w, rect.height + h);
+  }
+};
+
+Window.prototype.moveTo = function(x, y) {
+  x = x || 0;
+  y = y || 0;
+  this._window.moveTo(x, y);
+};
+
+Window.prototype.moveBy = function(x, y) {
+  var rect = this._window.getRect();
+  if (rect) {
+    this.moveTo(rect.x + x, rect.y + y);
+  }
+};
 
 Window.prototype.close = function() {
   this._window.close();
@@ -132,8 +208,8 @@ for (var i=0; i<1; i++) {
   var context = {};
 
   context.window = module.exports.createWindow({
-    width : Math.floor(Math.random() * 640),
-    height: Math.floor(Math.random() * 480)
+    width : Math.floor(Math.random() * 640) + 200,
+    height: Math.floor(Math.random() * 480) + 200
   });
 
   context.closeAttempts = 0;
@@ -165,8 +241,12 @@ for (var i=0; i<1; i++) {
 
 var timer = setTimeout(function tick() {
   contexts.forEach(function(context) {
+
+    context.window.moveBy(1, 1);
+
+    context.window.resizeBy(1,1);
     context.ctx.fillStyle = '#aaa';//context.color;
-    context.ctx.fillRect(0,0,context.window.width,context.window.height)
+    context.ctx.fillRect(0,0,context.window.innerWidth,context.window.innerHeight)
 
     context.ctx.fillStyle = '#000';//context.color;
     context.x+=context.xv;
@@ -179,13 +259,13 @@ var timer = setTimeout(function tick() {
       context.ctx.fillRect(0, 0, 100, 100);
     context.ctx.restore();
 
-    if (context.y > context.window.height-100) {
+    if (context.y > context.window.innerHeight-100) {
       context.yv = -Math.abs(context.yv);
     } else if (context.y < 0) {
       context.yv = Math.abs(context.yv)
     }
 
-    if (context.x > context.window.width-100) {
+    if (context.x > context.window.innerWidth-100) {
       context.xv = -Math.abs(context.xv);
     } else if (context.x < 0) {
       context.xv = Math.abs(context.xv)

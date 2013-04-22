@@ -142,12 +142,16 @@ void Window::Init(Handle<Object> exports) {
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
   NODE_PROTOTYPE_METHOD(resizeTo);
+  NODE_PROTOTYPE_METHOD(moveTo);
   NODE_PROTOTYPE_METHOD(getRect);
+
   NODE_PROTOTYPE_METHOD(get2dContext);
   NODE_PROTOTYPE_METHOD(flush);
+
   NODE_PROTOTYPE_METHOD(eventHandler);
   NODE_PROTOTYPE_METHOD(setTitle);
   NODE_PROTOTYPE_METHOD(close);
+
 
   Persistent<Function> constructor = Persistent<Function>::New(tpl->GetFunction());
   exports->Set(String::NewSymbol("Window"), constructor);
@@ -193,6 +197,7 @@ Handle<Value> Window::close(const Arguments& args) {
 void Window::setupSize() {
   if (this->handle) {
     glfwMakeContextCurrent(this->handle);
+
     glViewport(0,0, this->width, this->height);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -238,24 +243,37 @@ Handle<Value> Window::resizeTo(const Arguments& args) {
   win->width = args[0]->NumberValue();
   win->height = args[1]->NumberValue();
 
+  if (win->handle) {
+    printf("RESIZE %i,%i\n", win->width, win->height);
+    glfwSetWindowSize(win->handle, win->width, win->height);
+  }
+
   win->setupSize();
 
   return scope.Close(Undefined());
 }
 
-Handle<Value> Window::flush(const Arguments& args) {
+Handle<Value> Window::moveTo(const Arguments& args) {
   HandleScope scope;
 
   Window *win = ObjectWrap::Unwrap<Window>(args.This());
 
+  win->x = args[0]->NumberValue();
+  win->y = args[1]->NumberValue();
+
   if (win->handle) {
+    glfwSetWindowPos(win->handle, win->x, win->y);
+  }
 
-    glfwPollEvents();
+  return scope.Close(Undefined());
+}
 
-    glfwMakeContextCurrent(win->handle);
-    glGenTextures(1, &win->surfaceTexture[0]);
-    glBindTexture(GL_TEXTURE_2D, win->surfaceTexture[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, win->width, win->height, 0, GL_BGRA, GL_UNSIGNED_BYTE, win->canvas->data());
+void Window::swapBuffers() {
+  if (this->handle) {
+    glfwMakeContextCurrent(this->handle);
+    glGenTextures(1, &this->surfaceTexture[0]);
+    glBindTexture(GL_TEXTURE_2D, this->surfaceTexture[0]);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, this->width, this->height, 0, GL_BGRA, GL_UNSIGNED_BYTE, this->canvas->data());
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 
@@ -263,7 +281,7 @@ Handle<Value> Window::flush(const Arguments& args) {
     glLoadIdentity();
 
     glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, win->surfaceTexture[0]);
+    glBindTexture(GL_TEXTURE_2D, this->surfaceTexture[0]);
     glMatrixMode(GL_TEXTURE);
     glLoadIdentity();
     glScalef(1.0f, -1.0f, 1.0f);
@@ -271,15 +289,23 @@ Handle<Value> Window::flush(const Arguments& args) {
 
     glBegin(GL_QUADS);
       glTexCoord2f(0.0f, 0.0f); glVertex3f( 0.0f, 0.0f,  0);
-      glTexCoord2f(1.0f, 0.0f); glVertex3f( win->width, 0.0f,  0);
-      glTexCoord2f(1.0f, 1.0f); glVertex3f( win->width,  win->height,  0);
-      glTexCoord2f(0.0f, 1.0f); glVertex3f( 0.0f, win->height,  0);
+      glTexCoord2f(1.0f, 0.0f); glVertex3f( this->width, 0.0f,  0);
+      glTexCoord2f(1.0f, 1.0f); glVertex3f( this->width,  this->height,  0);
+      glTexCoord2f(0.0f, 1.0f); glVertex3f( 0.0f, this->height,  0);
     glEnd();
-assert(win->handle);
-    glfwSwapBuffers(win->handle);
-    glDeleteTextures(1, &win->surfaceTexture[0]);
-    glfwPollEvents();
+
+    if (this->handle) {
+      glfwSwapBuffers(this->handle);
+    }
+    glDeleteTextures(1, &this->surfaceTexture[0]);
   }
+}
+
+Handle<Value> Window::flush(const Arguments& args) {
+  HandleScope scope;
+  Window *win = ObjectWrap::Unwrap<Window>(args.This());
+  glfwPollEvents();
+  win->swapBuffers();
   return scope.Close(Undefined());
 }
 
