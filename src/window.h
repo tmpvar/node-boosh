@@ -31,6 +31,7 @@ class Window : public node::ObjectWrap {
   GLuint surfaceTexture[1];
   Persistent<Function> eventCallback;
   void setupSize();
+  void destroy();
 
  private:
   Window(int width, int height, const char *title);
@@ -49,6 +50,7 @@ class Window : public node::ObjectWrap {
   OBJECT_METHOD(flush)
   OBJECT_METHOD(eventHandler)
   OBJECT_METHOD(setTitle)
+  OBJECT_METHOD(close)
 };
 
 #endif

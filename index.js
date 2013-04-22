@@ -13,13 +13,8 @@ function Window(options) {
     height: 480,
     title: 'boosh!',
     fullscreen: false,
-  })
-options ={
-    width: 640,
-    height: 480,
-    title: 'boosh!',
-    fullscreen: false,
-  };
+  });
+
 
   EventEmitter.call(this);
   this._window = new NativeWindow(options.width, options.height, options.title);
@@ -29,8 +24,33 @@ options ={
   }
 
   this._window.eventHandler(function(raw) {
-    //raw._defaultPrevented = true;
+    raw.preventDefault = function() {
+      raw._defaultPrevented = true;
+    };
+
+    // window.on<event> handlers
+    var lower = raw.type.toLowerCase();
+
+    if (typeof this['on' + lower] === 'function') {
+      this[lower](raw);
+    }
+
+    this.emit(raw.type, raw);
   }.bind(this));
+
+  this.addEventListener = this.on;
+  this.removeEventListener = this.removeListener;
+
+  Object.defineProperty(this, 'title', {
+    set: function(v) {
+      title = v;
+      return this._window.setTitle(v);
+    },
+    get : function() {
+      return title;
+    },
+    configurable: false
+  });
 
 
   // this.width = options.width;
@@ -38,7 +58,6 @@ options ={
 
   this.canvas = new Canvas(options.width, options.height);
 }
-
 
 util.inherits(Window, EventEmitter);
 
@@ -48,25 +67,29 @@ Window.prototype.flush = function() {
 
 Object.defineProperty(Window.prototype, 'width', {
   get: function() {
-    return this._window.getRect().width;
+    var rect = this._window.getRect();
+    if (rect) {
+      return rect.width;
+    }
   },
   configurable: false
 });
 
 Object.defineProperty(Window.prototype, 'height', {
   get: function() {
-    return this._window.getRect().height;
+    var rect = this._window.getRect();
+    if (rect) {
+      return rect.height;
+    }
   },
   configurable: false
 });
 
-Object.defineProperty(Window.prototype, 'title', {
-  set: function(v) {
-    return this._window.setTitle(v);
-  },
-  configurable: false
-});
 
+Window.prototype.close = function() {
+  this._window.close();
+  delete this;
+};
 
 
 Window.prototype.getContext = function(type) {
@@ -111,6 +134,17 @@ for (var i=0; i<1; i++) {
   context.window = module.exports.createWindow({
     width : Math.floor(Math.random() * 640),
     height: Math.floor(Math.random() * 480)
+  });
+
+  context.closeAttempts = 0;
+  context.window.addEventListener('close', function(ev) {
+    context.closeAttempts++;
+    console.log('CLOSE!', context.closeAttempts)
+    if (context.closeAttempts <= 1) {
+      ev.preventDefault();
+    } else {
+      contexts.shift();
+    }
   });
 
   context.ctx = context.window.getContext('2d');
@@ -159,7 +193,6 @@ var timer = setTimeout(function tick() {
 
     context.window.flush();
   });
-  process.nextTick(tick);
+  contexts.length && process.nextTick(tick);
 }, 1000/40);
-
 
