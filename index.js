@@ -6,7 +6,7 @@ var defaults = require('defaults');
 var fs = require('fs');
 var NativeWindow = binding.Window;
 
-var Event = require('./lib/event');
+var events = require('./lib/event');
 
 function Window(options) {
   console.log(options);
@@ -28,7 +28,8 @@ function Window(options) {
   // Event dispatcher
   this._window.eventHandler(function(raw) {
     raw.target = this;
-    var ev = new Event(raw.type, raw);
+    var objectType = raw.objectType || 'Event';
+    var ev = new (events[objectType])(raw.type, raw);
 
     // window.on<event> handlers
     var lower = raw.type.toLowerCase();
@@ -240,13 +241,33 @@ for (var i=0; i<1; i++) {
   context.y = 0;
   context.yv = 1;
 
+
+  context.mouse = { x: 0, y: 0, color: 'red'};
+  context.window.addEventListener('mousemove', function(ev) {
+    var x = ev.clientX, y = ev.clientY;
+    if (x + 20 > context.window.innerWidth) {
+      x = context.window.innerWidth-20;
+    } else if (x < 20) {
+      x = 20;
+    }
+
+    if (y + 20 > context.window.outerHeight) {
+      y = context.window.innerHeight-20;
+    } else if (y < 20) {
+      y = 20;
+    }
+
+    context.mouse.x = x;
+    context.mouse.y = y;
+  });
+
   contexts.push(context);
 }
 
 var timer = setTimeout(function tick() {
   contexts.forEach(function(context) {
 
-    context.ctx.fillStyle = '#aaa';//context.color;
+    context.ctx.fillStyle = '#aaa';
     context.ctx.fillRect(0,0,context.window.innerWidth,context.window.innerHeight)
 
     context.ctx.fillStyle = context.color;
@@ -259,6 +280,9 @@ var timer = setTimeout(function tick() {
       context.ctx.translate(context.x, context.y);
       context.ctx.fillRect(0, 0, 100, 100);
     context.ctx.restore();
+
+    context.ctx.fillStyle=context.mouse.color;
+    context.ctx.fillRect(context.mouse.x - 20, context.mouse.y - 20, 40, 40);
 
     if (context.y > context.window.innerHeight-100) {
       context.yv = -Math.abs(context.yv);

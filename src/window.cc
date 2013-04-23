@@ -23,6 +23,7 @@ void APIENTRY resizedCallback(GLFWwindow* window,int width,int height) {
 
   Local<Object> event = Object::New();
   event->Set(String::NewSymbol("type"), String::NewSymbol("resize"));
+  event->Set(String::NewSymbol("objectType"), String::NewSymbol("Event"));
   event->Set(String::NewSymbol("width"), Number::New(width));
   event->Set(String::NewSymbol("height"), Number::New(height));
   event->Set(String::NewSymbol("_defaultPrevented"), Boolean::New(false));
@@ -51,6 +52,7 @@ void APIENTRY movedCallback(GLFWwindow* window,int x,int y) {
 
   Local<Object> event = Object::New();
   event->Set(String::NewSymbol("type"), String::NewSymbol("move"));
+  event->Set(String::NewSymbol("objectType"), String::NewSymbol("Event"));
   event->Set(String::NewSymbol("x"), Number::New(x));
   event->Set(String::NewSymbol("y"), Number::New(y));
   event->Set(String::NewSymbol("_defaultPrevented"), Boolean::New(false));
@@ -77,6 +79,7 @@ void APIENTRY closeCallback(GLFWwindow* window) {
   }
 
   Local<Object> event = Object::New();
+  event->Set(String::NewSymbol("objectType"), String::NewSymbol("Event"));
   event->Set(String::NewSymbol("type"), String::NewSymbol("close"));
   event->Set(String::NewSymbol("_defaultPrevented"), Boolean::New(false));
 
@@ -101,21 +104,19 @@ void APIENTRY focusCallback(GLFWwindow* window, int hasFocus) {
   }
 
   Local<Object> event = Object::New();
-
+  event->Set(String::NewSymbol("objectType"), String::NewSymbol("Event"));
   if (hasFocus) {
     event->Set(String::NewSymbol("type"), String::NewSymbol("focus"));
   } else {
     event->Set(String::NewSymbol("type"), String::NewSymbol("blur"));
   }
 
-  event->Set(String::NewSymbol("_defaultPrevented"), Boolean::New(false));
-
   const unsigned argc = 1;
   Local<Value> argv[argc] = { event };
   win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
 };
 
-void APIENTRY blurCallback(GLFWwindow* window) {
+void APIENTRY mouseMoveCallback(GLFWwindow* window, double x, double y) {
 
   Window *win = (Window *)glfwGetWindowUserPointer(window);
 
@@ -124,18 +125,15 @@ void APIENTRY blurCallback(GLFWwindow* window) {
   }
 
   Local<Object> event = Object::New();
-  event->Set(String::NewSymbol("type"), String::NewSymbol("close"));
-  event->Set(String::NewSymbol("_defaultPrevented"), Boolean::New(false));
+  event->Set(String::NewSymbol("type"), String::NewSymbol("mousemove"));
+  event->Set(String::NewSymbol("objectType"), String::NewSymbol("MouseEvent"));
+  event->Set(String::NewSymbol("x"), Number::New(x));
+  event->Set(String::NewSymbol("y"), Number::New(y));
+
 
   const unsigned argc = 1;
   Local<Value> argv[argc] = { event };
   win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
-
-  bool closePrevented = event->Get(String::NewSymbol("_defaultPrevented"))->BooleanValue();
-
-  if (!closePrevented) {
-    win->destroy();
-  }
 };
 
 
@@ -156,6 +154,9 @@ Window::Window(int width, int height, const char *title)
   glfwSetWindowPosCallback(this->handle, &movedCallback);
   glfwSetWindowCloseCallback(this->handle, &closeCallback);
   glfwSetWindowFocusCallback(this->handle, &focusCallback);
+
+  // Mouse
+  glfwSetCursorPosCallback(this->handle, &mouseMoveCallback);
 
   if (Window::idler == NULL) {
     // TODO: how to not leak?
