@@ -136,6 +136,33 @@ void APIENTRY mouseMoveCallback(GLFWwindow* window, double x, double y) {
   win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
 };
 
+void APIENTRY mouseEnterExitCallback(GLFWwindow* window, int inside) {
+
+  Window *win = (Window *)glfwGetWindowUserPointer(window);
+
+  if (!win->handle) {
+    return;
+  }
+
+  Local<Object> event = Object::New();
+
+  if (inside) {
+    event->Set(String::NewSymbol("type"), String::NewSymbol("mouseenter"));
+  } else {
+    event->Set(String::NewSymbol("type"), String::NewSymbol("mouseleave"));
+  }
+  event->Set(String::NewSymbol("objectType"), String::NewSymbol("MouseEvent"));
+
+  double x, y;
+  glfwGetCursorPos(win->handle, &x, &y);
+  event->Set(String::NewSymbol("x"), Number::New(x));
+  event->Set(String::NewSymbol("y"), Number::New(y));
+
+  const unsigned argc = 1;
+  Local<Value> argv[argc] = { event };
+  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+};
+
 
 uv_idle_t * Window::idler = NULL;
 
@@ -157,7 +184,7 @@ Window::Window(int width, int height, const char *title)
 
   // Mouse
   glfwSetCursorPosCallback(this->handle, &mouseMoveCallback);
-
+  glfwSetCursorEnterCallback(this->handle, &mouseEnterExitCallback);
   if (Window::idler == NULL) {
     // TODO: how to not leak?
     Window::idler = (uv_idle_t *)malloc(sizeof(uv_idle_t));

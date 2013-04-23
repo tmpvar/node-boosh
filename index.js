@@ -261,6 +261,14 @@ for (var i=0; i<1; i++) {
     context.mouse.y = y;
   });
 
+  context.window.addEventListener('mouseenter', function(ev) {
+    context.mouse.color = "red";
+  });
+
+  context.window.addEventListener('mouseleave', function(ev) {
+    context.mouse.color = "blue";
+  })
+
   contexts.push(context);
 }
 
