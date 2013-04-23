@@ -1,0 +1,32 @@
+{
+  "name": "boosh",
+  "version": "0.0.0",
+  "description": "spawn a window and draw stuff using the html5 canvas api\"",
+  "main": "index.js",
+  "dependencies": {
+    "animationframe": "~0.2.0",
+    "bindings": "~1.1.0",
+    "canvas": "~1.0.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "install": "node-gyp rebuild"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/tmpvar/node-boosh.git"
+  },
+  "keywords": [
+    "canvas",
+    "desktop",
+    "window",
+    "glfw",
+    "2d",
+    "drawing",
+    "rendering"
+  ],
+  "author": "Elijah Insua <tmpvar@gmail.com>",
+  "license": "MIT",
+  "gypfile": true
+}

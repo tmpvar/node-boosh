@@ -2,7 +2,6 @@ var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var binding = require('bindings')('boosh');
 var Canvas = require('canvas');
-var defaults = require('defaults');
 var fs = require('fs');
 var NativeWindow = binding.Window;
 var AnimationFrame = require('animationframe');
@@ -10,14 +9,12 @@ var AnimationFrame = require('animationframe');
 var events = require('./lib/event');
 
 function Window(options) {
-  console.log(options);
-  options = defaults(options || {}, {
-    width: 640,
-    height: 480,
-    title: 'boosh!',
-    fullscreen: false,
-  });
+  options = options || {};
 
+  options.width = options.width || 640;
+  options.height = options.height || 480;
+  options.title = options.title || 'boosh!';
+  options.fullscreen = options.fullscreen || false;
 
   EventEmitter.call(this);
   this._window = new NativeWindow(options.width, options.height, options.title);
@@ -40,6 +37,11 @@ function Window(options) {
     }
 
     this.emit(raw.type, ev);
+
+    if (raw.type === 'close' && !ev.defaultPrevented) {
+      this.close();
+    }
+
   }.bind(this));
 
   this.addEventListener = this.on;
@@ -56,13 +58,7 @@ function Window(options) {
     configurable: false
   });
 
-
-  // this.width = options.width;
-  // this.height = options.height;
-
   this.canvas = new Canvas(options.width, options.height);
-
-
 
   var manager = new AnimationFrame(function() {
     this._window.flush();
@@ -223,8 +219,6 @@ context.window.addEventListener('close', function(ev) {
   context.closeAttempts++;
   if (context.closeAttempts <= 1) {
     ev.preventDefault();
-  } else {
-    contexts.shift();
   }
 });
 
