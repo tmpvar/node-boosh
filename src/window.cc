@@ -266,6 +266,10 @@ void APIENTRY keyboardKeyCallback(GLFWwindow* window, int key, int pressed) {
     }
   }
 
+  if (key == GLFW_KEY_ESCAPE) {
+    key = 27;
+  }
+
   event->Set(String::NewSymbol("keyCode"), Number::New(key));
 
   event->Set(String::NewSymbol("ctrlKey"), Boolean::New(control));
