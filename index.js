@@ -267,7 +267,17 @@ for (var i=0; i<1; i++) {
 
   context.window.addEventListener('mouseleave', function(ev) {
     context.mouse.color = "blue";
-  })
+  });
+
+  context.window.addEventListener('mousedown', function(ev) {
+    var buttons = ['green', 'orange', 'purple', 'magenta', 'pink'];
+    context.mouse.color = buttons[ev.button];
+  });
+
+  context.window.addEventListener('mouseup', function(ev) {
+    context.mouse.color = "red";
+  });
+
 
   contexts.push(context);
 }

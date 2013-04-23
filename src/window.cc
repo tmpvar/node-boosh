@@ -164,6 +164,61 @@ void APIENTRY mouseEnterExitCallback(GLFWwindow* window, int inside) {
 };
 
 
+void APIENTRY mouseButtonCallback(GLFWwindow* window, int button, int pressed) {
+
+  Window *win = (Window *)glfwGetWindowUserPointer(window);
+
+  if (!win->handle) {
+    return;
+  }
+
+  Local<Object> event = Object::New();
+
+  switch (pressed) {
+    case GLFW_PRESS:
+      event->Set(String::NewSymbol("type"), String::NewSymbol("mousedown"));
+    break;
+
+    case GLFW_RELEASE:
+      event->Set(String::NewSymbol("type"), String::NewSymbol("mouseup"));
+    break;
+  }
+
+  switch (button) {
+    // left
+    case GLFW_MOUSE_BUTTON_1:
+      event->Set(String::NewSymbol("button"), Number::New(0));
+    break;
+
+    // middle
+    case GLFW_MOUSE_BUTTON_3:
+      event->Set(String::NewSymbol("button"), Number::New(1));
+    break;
+
+    // right
+    case GLFW_MOUSE_BUTTON_2:
+      event->Set(String::NewSymbol("button"), Number::New(2));
+    break;
+
+    // handle the other buttons
+    default:
+      event->Set(String::NewSymbol("button"), Number::New(button));
+    break;
+  }
+
+  event->Set(String::NewSymbol("objectType"), String::NewSymbol("MouseEvent"));
+
+  double x, y;
+  glfwGetCursorPos(win->handle, &x, &y);
+  event->Set(String::NewSymbol("x"), Number::New(x));
+  event->Set(String::NewSymbol("y"), Number::New(y));
+
+  const unsigned argc = 1;
+  Local<Value> argv[argc] = { event };
+  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+};
+
+
 uv_idle_t * Window::idler = NULL;
 
 Window::Window(int width, int height, const char *title)
@@ -181,7 +236,7 @@ Window::Window(int width, int height, const char *title)
   glfwSetWindowPosCallback(this->handle, &movedCallback);
   glfwSetWindowCloseCallback(this->handle, &closeCallback);
   glfwSetWindowFocusCallback(this->handle, &focusCallback);
-
+  glfwSetMouseButtonCallback(this->handle, &mouseButtonCallback);
   // Mouse
   glfwSetCursorPosCallback(this->handle, &mouseMoveCallback);
   glfwSetCursorEnterCallback(this->handle, &mouseEnterExitCallback);
