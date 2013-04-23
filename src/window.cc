@@ -218,6 +218,70 @@ void APIENTRY mouseButtonCallback(GLFWwindow* window, int button, int pressed) {
   win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
 };
 
+void APIENTRY keyboardKeyCallback(GLFWwindow* window, int key, int pressed) {
+
+  Window *win = (Window *)glfwGetWindowUserPointer(window);
+
+  if (!win->handle || key == GLFW_KEY_RIGHT_SHIFT || key == GLFW_KEY_LEFT_SHIFT) {
+    return;
+  }
+
+  Local<Object> event = Object::New();
+
+  switch (pressed) {
+    case GLFW_PRESS:
+      event->Set(String::NewSymbol("type"), String::NewSymbol("keyup"));
+    break;
+
+    case GLFW_RELEASE:
+      event->Set(String::NewSymbol("type"), String::NewSymbol("keydown"));
+    break;
+
+    case GLFW_REPEAT:
+      event->Set(String::NewSymbol("type"), String::NewSymbol("keydown"));
+    break;
+  }
+
+  int shift = glfwGetKey(win->handle, GLFW_KEY_RIGHT_SHIFT) ||
+              glfwGetKey(win->handle, GLFW_KEY_RIGHT_SHIFT);
+
+  int meta =  glfwGetKey(win->handle, GLFW_KEY_LEFT_SUPER) ||
+              glfwGetKey(win->handle, GLFW_KEY_RIGHT_SUPER);
+
+  int alt = glfwGetKey(win->handle, GLFW_KEY_LEFT_ALT) ||
+            glfwGetKey(win->handle, GLFW_KEY_LEFT_ALT);
+
+  int control = glfwGetKey(win->handle, GLFW_KEY_RIGHT_CONTROL) ||
+                glfwGetKey(win->handle, GLFW_KEY_RIGHT_CONTROL);
+
+  int capsLock =  glfwGetKey(win->handle, GLFW_KEY_CAPS_LOCK);
+
+  if (key >= 65 && key<=90) {
+    if (capsLock) {
+      if(shift) {
+        key+=32;
+      }
+    } else if (!shift) {
+      key+=32;
+    }
+  }
+
+  event->Set(String::NewSymbol("keyCode"), Number::New(key));
+
+  event->Set(String::NewSymbol("ctrlKey"), Boolean::New(control));
+  event->Set(String::NewSymbol("shiftKey"), Boolean::New(shift));
+  event->Set(String::NewSymbol("altKey"), Boolean::New(alt));
+  event->Set(String::NewSymbol("metaKEy"), Boolean::New(meta));
+
+  // TODO: KeyboardEvent.location
+
+  event->Set(String::NewSymbol("objectType"), String::NewSymbol("KeyboardEvent"));
+
+  const unsigned argc = 1;
+  Local<Value> argv[argc] = { event };
+  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+};
+
 
 uv_idle_t * Window::idler = NULL;
 
@@ -240,6 +304,12 @@ Window::Window(int width, int height, const char *title)
   // Mouse
   glfwSetCursorPosCallback(this->handle, &mouseMoveCallback);
   glfwSetCursorEnterCallback(this->handle, &mouseEnterExitCallback);
+
+  // Keyboard
+  glfwSetKeyCallback(this->handle, &keyboardKeyCallback);
+
+
+
   if (Window::idler == NULL) {
     // TODO: how to not leak?
     Window::idler = (uv_idle_t *)malloc(sizeof(uv_idle_t));

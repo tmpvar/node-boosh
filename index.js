@@ -279,6 +279,15 @@ for (var i=0; i<1; i++) {
   });
 
 
+  context.text = {
+    value : '',
+    color : 'black'
+  };
+
+  context.window.addEventListener('keydown', function(ev) {
+    context.text.value += String.fromCharCode(ev.keyCode);
+  });
+
   contexts.push(context);
 }
 
@@ -313,6 +322,10 @@ var timer = setTimeout(function tick() {
     } else if (context.x < 0) {
       context.xv = Math.abs(context.xv)
     }
+
+    context.ctx.font="20px sans-serif";
+    context.ctx.fillStyle = context.text.color;
+    context.ctx.fillText(context.text.value, 5, 30);
 
     context.window.flush();
   });
