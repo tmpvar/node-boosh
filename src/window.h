@@ -53,6 +53,8 @@ class Window : public node::ObjectWrap {
   OBJECT_METHOD(eventHandler)
   OBJECT_METHOD(setTitle)
   OBJECT_METHOD(close)
+  OBJECT_METHOD(focus)
+  OBJECT_METHOD(blur)
 };
 
 #endif

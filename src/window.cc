@@ -92,6 +92,53 @@ void APIENTRY closeCallback(GLFWwindow* window) {
 };
 
 
+void APIENTRY focusCallback(GLFWwindow* window, int hasFocus) {
+
+  Window *win = (Window *)glfwGetWindowUserPointer(window);
+
+  if (!win->handle) {
+    return;
+  }
+
+  Local<Object> event = Object::New();
+
+  if (hasFocus) {
+    event->Set(String::NewSymbol("type"), String::NewSymbol("focus"));
+  } else {
+    event->Set(String::NewSymbol("type"), String::NewSymbol("blur"));
+  }
+
+  event->Set(String::NewSymbol("_defaultPrevented"), Boolean::New(false));
+
+  const unsigned argc = 1;
+  Local<Value> argv[argc] = { event };
+  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+};
+
+void APIENTRY blurCallback(GLFWwindow* window) {
+
+  Window *win = (Window *)glfwGetWindowUserPointer(window);
+
+  if (!win->handle) {
+    return;
+  }
+
+  Local<Object> event = Object::New();
+  event->Set(String::NewSymbol("type"), String::NewSymbol("close"));
+  event->Set(String::NewSymbol("_defaultPrevented"), Boolean::New(false));
+
+  const unsigned argc = 1;
+  Local<Value> argv[argc] = { event };
+  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+
+  bool closePrevented = event->Get(String::NewSymbol("_defaultPrevented"))->BooleanValue();
+
+  if (!closePrevented) {
+    win->destroy();
+  }
+};
+
+
 uv_idle_t * Window::idler = NULL;
 
 Window::Window(int width, int height, const char *title)
@@ -108,7 +155,7 @@ Window::Window(int width, int height, const char *title)
   glfwSetWindowSizeCallback(this->handle, &resizedCallback);
   glfwSetWindowPosCallback(this->handle, &movedCallback);
   glfwSetWindowCloseCallback(this->handle, &closeCallback);
-
+  glfwSetWindowFocusCallback(this->handle, &focusCallback);
 
   if (Window::idler == NULL) {
     // TODO: how to not leak?
@@ -244,7 +291,6 @@ Handle<Value> Window::resizeTo(const Arguments& args) {
   win->height = args[1]->NumberValue();
 
   if (win->handle) {
-    printf("RESIZE %i,%i\n", win->width, win->height);
     glfwSetWindowSize(win->handle, win->width, win->height);
   }
 

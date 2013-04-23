@@ -137,13 +137,11 @@ function(v) {
 Window.prototype.resizeTo = function(w, h) {
   w = w || 0;
   h = h || 0;
-console.log('resize in js: ', w, h);
   this._window.resizeTo(w, h);
 };
 
 Window.prototype.resizeBy = function(w, h) {
   var rect = this._window.getRect();
-  console.log('rect', rect);
   if (rect) {
     this.resizeTo(rect.width + w, rect.height + h);
   }
@@ -166,6 +164,10 @@ Window.prototype.close = function() {
   this._window.close();
   delete this;
 };
+
+Window.prototype.blur = Window.prototype.focus = function() {
+  throw new Error('DERP - stealing focus isn\'t cool');
+}
 
 
 Window.prototype.getContext = function(type) {
@@ -215,12 +217,21 @@ for (var i=0; i<1; i++) {
   context.closeAttempts = 0;
   context.window.addEventListener('close', function(ev) {
     context.closeAttempts++;
-    console.log('CLOSE!', context.closeAttempts)
     if (context.closeAttempts <= 1) {
       ev.preventDefault();
     } else {
       contexts.shift();
     }
+  });
+
+  context.color = '#000'
+
+  context.window.addEventListener('blur', function() {
+    context.color = "#ddd";
+  });
+
+  context.window.addEventListener('focus', function() {
+    context.color = "#000";
   });
 
   context.ctx = context.window.getContext('2d');
@@ -229,26 +240,16 @@ for (var i=0; i<1; i++) {
   context.y = 0;
   context.yv = 1;
 
-  context.color = 'rgba(' + [
-    Math.floor(Math.random()*255),
-    Math.floor(Math.random()*255),
-    Math.floor(Math.random()*255),
-    1
-  ].join(',') + ')';
-
   contexts.push(context);
 }
 
 var timer = setTimeout(function tick() {
   contexts.forEach(function(context) {
 
-    context.window.moveBy(1, 1);
-
-    context.window.resizeBy(1,1);
     context.ctx.fillStyle = '#aaa';//context.color;
     context.ctx.fillRect(0,0,context.window.innerWidth,context.window.innerHeight)
 
-    context.ctx.fillStyle = '#000';//context.color;
+    context.ctx.fillStyle = context.color;
     context.x+=context.xv;
     context.y+=context.yv;
 
