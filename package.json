@@ -6,7 +6,7 @@
   "dependencies": {
     "animationframe": "~0.2.0",
     "bindings": "~1.1.0",
-    "canvas": "~1.0.2"
+    "context2d": "*"
   },
   "devDependencies": {},
   "scripts": {

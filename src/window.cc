@@ -1,4 +1,3 @@
-#define BUILDING_NODE_EXTENSION
 #include <node.h>
 #include "window.h"
 #include <GL/glfw3.h>
@@ -9,7 +8,7 @@ using namespace v8;
 // Event processors
 //
 
-void uv_gui_idler(uv_idle_t* handle, int status) {
+void uv_gui_idler(uv_timer_t* timer, int status) {
   glfwPollEvents();
 }
 
@@ -287,7 +286,8 @@ void APIENTRY keyboardKeyCallback(GLFWwindow* window, int key, int pressed) {
 };
 
 
-uv_idle_t * Window::idler = NULL;
+uv_timer_t * Window::input_timer = NULL;
+int Window::window_count = 0;
 
 Window::Window(int width, int height, const char *title)
   : ObjectWrap()
@@ -295,6 +295,7 @@ Window::Window(int width, int height, const char *title)
   this->width = width;
   this->height = height;
   this->handle = glfwCreateWindow(width, height, title, NULL, NULL);
+  Window::window_count++;
 
   glfwGetWindowPos(this->handle, &this->x, &this->y);
 
@@ -314,27 +315,36 @@ Window::Window(int width, int height, const char *title)
 
 
 
-  if (Window::idler == NULL) {
+  if (Window::input_timer == NULL) {
     // TODO: how to not leak?
-    Window::idler = (uv_idle_t *)malloc(sizeof(uv_idle_t));
-    uv_idle_init(uv_default_loop(), Window::idler);
-    uv_idle_start(Window::idler, uv_gui_idler);
+    Window::input_timer = (uv_timer_t *)malloc(sizeof(uv_timer_t));
+    uv_timer_init(uv_default_loop(), Window::input_timer);
+    uv_timer_start(
+      Window::input_timer,
+      uv_gui_idler,
+      10,
+      5
+    );
   }
 }
 
 Window::~Window() {
-  // TODO: this shuts everything down which will
-  //
-  glfwTerminate();
+  if (Window::window_count <= 0) {
+    glfwTerminate();
+  }
 }
 
 void Window::destroy() {
   if (this->handle) {
     glfwDestroyWindow(this->handle);
     this->handle = NULL;
-
-    uv_idle_stop(Window::idler);
   }
+
+  Window::window_count--;
+  if (Window::window_count <= 0) {
+    uv_timer_stop(Window::input_timer);
+  }
+
 }
 
 Persistent<Function> Window::constructor;
@@ -349,7 +359,7 @@ void Window::Init(Handle<Object> exports) {
   NODE_PROTOTYPE_METHOD(moveTo);
   NODE_PROTOTYPE_METHOD(getRect);
 
-  NODE_PROTOTYPE_METHOD(get2dContext);
+  NODE_PROTOTYPE_METHOD(setContext2d);
   NODE_PROTOTYPE_METHOD(flush);
 
   NODE_PROTOTYPE_METHOD(eventHandler);
@@ -409,22 +419,17 @@ void Window::setupSize() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    this->canvas->width = this->width;
-    this->canvas->height = this->height;
-    this->canvas->resurface(this->canvasHandle);
+    this->ctx->resizeCanvas(this->width, this->height);
   }
 }
 
-Handle<Value> Window::get2dContext(const Arguments& args) {
+Handle<Value> Window::setContext2d(const Arguments& args) {
   HandleScope scope;
 
   Window *win = ObjectWrap::Unwrap<Window>(args.This());
 
   if (win->handle) {
-
-    win->canvasHandle =   Persistent<Object>::New(Handle<Object>::Cast(args[0]));
-    win->canvas = ObjectWrap::Unwrap<Canvas>(args[0]->ToObject());
-
+    win->ctx = ObjectWrap::Unwrap<Context2D>(args[0]->ToObject());
     win->setupSize();
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.5f);
@@ -474,9 +479,12 @@ Handle<Value> Window::moveTo(const Arguments& args) {
 void Window::swapBuffers() {
   if (this->handle) {
     glfwMakeContextCurrent(this->handle);
-    glGenTextures(1, &this->surfaceTexture[0]);
+
     glBindTexture(GL_TEXTURE_2D, this->surfaceTexture[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, this->width, this->height, 0, GL_BGRA, GL_UNSIGNED_BYTE, this->canvas->data());
+
+    void *data = this->ctx->getTextureData();
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, this->width, this->height, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
+
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
 
@@ -507,7 +515,6 @@ void Window::swapBuffers() {
 Handle<Value> Window::flush(const Arguments& args) {
   HandleScope scope;
   Window *win = ObjectWrap::Unwrap<Window>(args.This());
-  glfwPollEvents();
   win->swapBuffers();
   return scope.Close(Undefined());
 }

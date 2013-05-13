@@ -1,7 +1,7 @@
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var binding = require('bindings')('boosh');
-var Canvas = require('canvas');
+var context2d = require('context2d');
 var fs = require('fs');
 var NativeWindow = binding.Window;
 var AnimationFrame = require('animationframe');
@@ -58,8 +58,6 @@ function Window(options) {
     configurable: false
   });
 
-  this.canvas = new Canvas(options.width, options.height);
-
   var manager = new AnimationFrame(function() {
     this._window.flush();
   }.bind(this));
@@ -69,6 +67,7 @@ function Window(options) {
 
   this.close = function() {
     this._window.close();
+    delete this._window;
     manager.destroy();
   };
 }
@@ -177,15 +176,13 @@ Window.prototype.getContext = function(type) {
   }
 
   if (type === '2d') {
-    this.context = this.canvas.getContext(type);
-    this._window.get2dContext(this.canvas);
+    this.context = context2d.createContext(this, this.width, this.height, binding.Context2D);
+    this._window.setContext2d(this.context);
     return this.context;
   }
   this.context = this.canvas.getContext(type);
   return this.context;
 };
-
-
 
 /*
 
@@ -291,9 +288,7 @@ context.window.addEventListener('keydown', function(ev) {
 });
 
 
-
 context.window.requestAnimationFrame(function() {
-
   context.ctx.fillStyle = '#aaa';
   context.ctx.fillRect(0,0,context.window.innerWidth,context.window.innerHeight)
 

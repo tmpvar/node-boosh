@@ -1,4 +1,3 @@
-#define BUILDING_NODE_EXTENSION
 #ifndef WINDOW_H
 #define WINDOW_H
 
@@ -13,7 +12,7 @@
 #define GLFW_INCLUDE_GLU 1
 
 #include <node.h>
-#include <Canvas.h>
+#include <Context2D.h>
 #include <GL/glfw3.h>
 #include <uv.h>
 
@@ -24,7 +23,7 @@ class Window : public node::ObjectWrap {
   static void Init(Handle<Object> exports);
   static Handle<Value> NewInstance(const Arguments& args);
 
-  Canvas *canvas;
+  Context2D *ctx;
   Persistent<Object> canvasHandle;
   GLFWwindow *handle;
   int width, height, x, y;
@@ -38,8 +37,8 @@ class Window : public node::ObjectWrap {
   Window(int width, int height, const char *title);
   ~Window();
 
-  static uv_idle_t *idler;
-
+  static uv_timer_t *input_timer;
+  static int window_count;
 
   static Persistent<Function> constructor;
 
@@ -48,7 +47,7 @@ class Window : public node::ObjectWrap {
   OBJECT_METHOD(resizeTo)
   OBJECT_METHOD(moveTo)
   OBJECT_METHOD(getRect)
-  OBJECT_METHOD(get2dContext)
+  OBJECT_METHOD(setContext2d)
   OBJECT_METHOD(flush)
   OBJECT_METHOD(eventHandler)
   OBJECT_METHOD(setTitle)

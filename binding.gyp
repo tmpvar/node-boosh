@@ -3,21 +3,26 @@
     'platform': '<(OS)',
   },
 
+  'includes' : {
+    'node_modules/context2d/context2d.gypi'
+  },
+
   'targets': [
     {
       'target_name': 'boosh',
       'dependencies' : [
         'glfw',
         'glew',
-        'node_modules/canvas/binding.gyp:canvas'
+        'node_modules/context2d/binding.gyp:context2d-static'
       ],
       'sources' : [
         'src/binding.cc',
         'src/window.cc'
       ],
       'include_dirs' : [
+        '<@(shared_include_dirs)',
         'deps/glfw/include',
-        'node_modules/canvas/src',
+        'node_modules/context2d/src',
         'deps/glew/include'
       ]
     },
