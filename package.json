@@ -6,7 +6,7 @@
   "dependencies": {
     "animationframe": "~0.2.0",
     "bindings": "~1.1.0",
-    "context2d": "*"
+    "context2d": "git://github.com/tmpvar/context2d.git"
   },
   "devDependencies": {},
   "scripts": {
