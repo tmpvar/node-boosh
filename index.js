@@ -59,7 +59,9 @@ function Window(options) {
   });
 
   var manager = new AnimationFrame(function() {
-    this._window.flush();
+    if (this.context && this.context.dirty) {
+      this._window.flush();
+    }
   }.bind(this));
 
   this.requestAnimationFrame = manager.requestAnimationFrame;

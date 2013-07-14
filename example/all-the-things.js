@@ -84,7 +84,9 @@ context.window.addEventListener('keydown', function(ev) {
 });
 
 
-context.window.requestAnimationFrame(function() {
+context.window.requestAnimationFrame(function tick() {
+  context.window.requestAnimationFrame(tick);
+
   context.ctx.fillStyle = '#aaa';
   context.ctx.fillRect(0,0,context.window.innerWidth,context.window.innerHeight)
 

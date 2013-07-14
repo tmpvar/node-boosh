@@ -12,6 +12,16 @@ void uv_gui_idler(uv_timer_t* timer, int status) {
   glfwPollEvents();
 }
 
+void APIENTRY refreshCallback(GLFWwindow* window) {
+  Window *win = (Window *)glfwGetWindowUserPointer(window);
+
+  if (!win->handle) {
+    return;
+  }
+
+  win->swapBuffers();
+}
+
 void APIENTRY resizedCallback(GLFWwindow* window,int width,int height) {
 
   Window *win = (Window *)glfwGetWindowUserPointer(window);
