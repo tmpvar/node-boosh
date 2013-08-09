@@ -70,6 +70,7 @@ function Window(options) {
   this.close = function() {
     this._window.close();
     delete this._window;
+    delete this.context;
     manager.destroy();
   };
 }
