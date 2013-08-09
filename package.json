@@ -1,6 +1,6 @@
 {
   "name": "boosh",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "spawn a window and draw stuff using the html5 canvas api\"",
   "main": "index.js",
   "dependencies": {
