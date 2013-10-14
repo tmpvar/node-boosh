@@ -68,7 +68,23 @@
             ]
           }
         }],
-        ['platform == "win"', {'variables': {'platform': 'win32'}}],
+        ['platform == "win"', {
+          'variables': {'platform': 'win32'},
+          'sources' : [
+            'deps/glfw/src/win32_clipboard.c',
+            'deps/glfw/src/win32_gamma.c',
+            'deps/glfw/src/win32_init.c',
+            'deps/glfw/src/win32_joystick.c',
+            'deps/glfw/src/win32_monitor.c',
+            'deps/glfw/src/win32_time.c',
+            'deps/glfw/src/win32_window.c',
+            'deps/glfw/src/wgl_context.c',
+          ],
+          'include_dirs' : [
+            'deps/glfw/src',
+            'deps/glfw-support/win'
+          ]
+        }],
         ['platform == "linux"', {'variables': {'platform': 'x11'}}],
       ],
 

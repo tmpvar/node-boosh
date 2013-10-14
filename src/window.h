@@ -17,8 +17,9 @@
 #include <uv.h>
 
 using namespace v8;
+using namespace node;
 
-class Window : public node::ObjectWrap {
+class Window : public ObjectWrap {
  public:
   static void Init(Handle<Object> exports);
   static Handle<Value> NewInstance(const Arguments& args);

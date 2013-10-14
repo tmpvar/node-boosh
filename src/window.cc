@@ -1,9 +1,7 @@
-#include <node.h>
 #include "window.h"
-#include <GL/glfw3.h>
 #include <stdio.h>
 using namespace v8;
-
+using namespace node;
 //
 // Event processors
 //
@@ -493,7 +491,7 @@ void Window::swapBuffers() {
     glBindTexture(GL_TEXTURE_2D, this->surfaceTexture[0]);
 
     void *data = this->ctx->getTextureData();
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, this->width, this->height, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, this->width, this->height, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, data);
 
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
@@ -551,7 +549,7 @@ Handle<Value> Window::getRect(const Arguments& args) {
 }
 
 
-Handle<v8::Value> Window::New(const v8::Arguments& args) {
+Handle<Value> Window::New(const Arguments& args) {
   HandleScope scope;
 
   int width = args[0]->ToInteger()->Value();

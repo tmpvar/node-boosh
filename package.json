@@ -4,7 +4,7 @@
   "description": "spawn a window and draw stuff using the html5 canvas api\"",
   "main": "index.js",
   "dependencies": {
-    "animationframe": "~0.3.0",
+    "animationframe": "git://github.com/tmpvar/animationframe.git",
     "bindings": "~1.1.0",
     "context2d": "git://github.com/tmpvar/context2d.git"
   },
