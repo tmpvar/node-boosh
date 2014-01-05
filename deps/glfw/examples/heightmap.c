@@ -30,7 +30,7 @@
 #include <stddef.h>
 #include "getopt.h"
 
-#include <GL/glfw3.h>
+#include <GLFW/glfw3.h>
 #include <GL/glext.h>
 
 /* OpenGL function pointers */
@@ -477,7 +477,7 @@ static void update_mesh(void)
  * GLFW callback functions
  *********************************************************************/
 
-static void key_callback(GLFWwindow* window, int key, int action)
+static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
     switch(key)
     {
@@ -644,7 +644,7 @@ int main(int argc, char** argv)
     /* main loop */
     frame = 0;
     iter = 0;
-    dt = last_update_time = glfwGetTime();
+    last_update_time = glfwGetTime();
 
     while (!glfwWindowShouldClose(window))
     {

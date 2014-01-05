@@ -2,7 +2,7 @@
 #include <node_buffer.h>
 #include <v8.h>
 #include <GL/glew.h>
-#include <GL/glfw3.h>
+#include <GLFW/glfw3.h>
 #include "uv.h"
 #include <Context2D.h>
 #include "window.h"

@@ -1,8 +1,5 @@
 //========================================================================
-// GLFW - An OpenGL library
-// Platform:    Any
-// API version: 3.0
-// WWW:         http://www.glfw.org/
+// GLFW 3.0 - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2010 Camilla Berglund <elmindreda@elmindreda.org>
@@ -35,7 +32,7 @@
 //////                        GLFW public API                       //////
 //////////////////////////////////////////////////////////////////////////
 
-GLFWAPI int glfwGetJoystickParam(int joy, int param)
+GLFWAPI int glfwJoystickPresent(int joy)
 {
     _GLFW_REQUIRE_INIT_OR_RETURN(0);
 
@@ -45,59 +42,37 @@ GLFWAPI int glfwGetJoystickParam(int joy, int param)
         return 0;
     }
 
-    return _glfwPlatformGetJoystickParam(joy, param);
+    return _glfwPlatformJoystickPresent(joy);
 }
 
-GLFWAPI int glfwGetJoystickAxes(int joy, float* axes, int numaxes)
+GLFWAPI const float* glfwGetJoystickAxes(int joy, int* count)
 {
-    int i;
+    *count = 0;
 
-    _GLFW_REQUIRE_INIT_OR_RETURN(0);
+    _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
 
     if (joy < 0 || joy > GLFW_JOYSTICK_LAST)
     {
         _glfwInputError(GLFW_INVALID_ENUM, NULL);
-        return 0;
+        return NULL;
     }
 
-    if (axes == NULL || numaxes < 0)
-    {
-        _glfwInputError(GLFW_INVALID_VALUE, NULL);
-        return 0;
-    }
-
-    // Clear positions
-    for (i = 0;  i < numaxes;  i++)
-        axes[i] = 0.0f;
-
-    return _glfwPlatformGetJoystickAxes(joy, axes, numaxes);
+    return _glfwPlatformGetJoystickAxes(joy, count);
 }
 
-GLFWAPI int glfwGetJoystickButtons(int joy,
-                                   unsigned char* buttons,
-                                   int numbuttons)
+GLFWAPI const unsigned char* glfwGetJoystickButtons(int joy, int* count)
 {
-    int i;
+    *count = 0;
 
-    _GLFW_REQUIRE_INIT_OR_RETURN(0);
+    _GLFW_REQUIRE_INIT_OR_RETURN(NULL);
 
     if (joy < 0 || joy > GLFW_JOYSTICK_LAST)
     {
         _glfwInputError(GLFW_INVALID_ENUM, NULL);
-        return 0;
+        return NULL;
     }
 
-    if (buttons == NULL || numbuttons < 0)
-    {
-        _glfwInputError(GLFW_INVALID_VALUE, NULL);
-        return 0;
-    }
-
-    // Clear button states
-    for (i = 0;  i < numbuttons;  i++)
-        buttons[i] = GLFW_RELEASE;
-
-    return _glfwPlatformGetJoystickButtons(joy, buttons, numbuttons);
+    return _glfwPlatformGetJoystickButtons(joy, count);
 }
 
 GLFWAPI const char* glfwGetJoystickName(int joy)

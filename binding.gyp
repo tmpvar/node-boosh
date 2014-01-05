@@ -58,7 +58,8 @@
             'deps/glfw-support/cocoa'
           ],
           'defines' : [
-            '__MACOSX_CORE__'
+            '__MACOSX_CORE__',
+            '_GLFW_USE_CONFIG_H'
           ],
           'link_settings' : {
             'libraries' : [

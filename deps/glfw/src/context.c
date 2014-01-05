@@ -1,8 +1,5 @@
 //========================================================================
-// GLFW - An OpenGL library
-// Platform:    Any
-// API version: 3.0
-// WWW:         http://www.glfw.org/
+// GLFW 3.0 - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2010 Camilla Berglund <elmindreda@elmindreda.org>
@@ -101,7 +98,7 @@ GLboolean _glfwIsValidContextConfig(_GLFWwndconfig* wndconfig)
 
     if (wndconfig->clientAPI == GLFW_OPENGL_API)
     {
-        if (wndconfig->glMajor < 1 || wndconfig->glMinor < 0 ||
+        if ((wndconfig->glMajor < 1 || wndconfig->glMinor < 0) ||
             (wndconfig->glMajor == 1 && wndconfig->glMinor > 5) ||
             (wndconfig->glMajor == 2 && wndconfig->glMinor > 1) ||
             (wndconfig->glMajor == 3 && wndconfig->glMinor > 3))
@@ -204,7 +201,164 @@ GLboolean _glfwIsValidContextConfig(_GLFWwndconfig* wndconfig)
     return GL_TRUE;
 }
 
-GLboolean _glfwRefreshContextParams(void)
+const _GLFWfbconfig* _glfwChooseFBConfig(const _GLFWfbconfig* desired,
+                                         const _GLFWfbconfig* alternatives,
+                                         unsigned int count)
+{
+    unsigned int i;
+    unsigned int missing, leastMissing = UINT_MAX;
+    unsigned int colorDiff, leastColorDiff = UINT_MAX;
+    unsigned int extraDiff, leastExtraDiff = UINT_MAX;
+    const _GLFWfbconfig* current;
+    const _GLFWfbconfig* closest = NULL;
+
+    for (i = 0;  i < count;  i++)
+    {
+        current = alternatives + i;
+
+        if (desired->stereo > 0 && current->stereo == 0)
+        {
+            // Stereo is a hard constraint
+            continue;
+        }
+
+        // Count number of missing buffers
+        {
+            missing = 0;
+
+            if (desired->alphaBits > 0 && current->alphaBits == 0)
+                missing++;
+
+            if (desired->depthBits > 0 && current->depthBits == 0)
+                missing++;
+
+            if (desired->stencilBits > 0 && current->stencilBits == 0)
+                missing++;
+
+            if (desired->auxBuffers > 0 && current->auxBuffers < desired->auxBuffers)
+                missing += desired->auxBuffers - current->auxBuffers;
+
+            if (desired->samples > 0 && current->samples == 0)
+            {
+                // Technically, several multisampling buffers could be
+                // involved, but that's a lower level implementation detail and
+                // not important to us here, so we count them as one
+                missing++;
+            }
+        }
+
+        // These polynomials make many small channel size differences matter
+        // less than one large channel size difference
+
+        // Calculate color channel size difference value
+        {
+            colorDiff = 0;
+
+            if (desired->redBits > 0)
+            {
+                colorDiff += (desired->redBits - current->redBits) *
+                             (desired->redBits - current->redBits);
+            }
+
+            if (desired->greenBits > 0)
+            {
+                colorDiff += (desired->greenBits - current->greenBits) *
+                             (desired->greenBits - current->greenBits);
+            }
+
+            if (desired->blueBits > 0)
+            {
+                colorDiff += (desired->blueBits - current->blueBits) *
+                             (desired->blueBits - current->blueBits);
+            }
+        }
+
+        // Calculate non-color channel size difference value
+        {
+            extraDiff = 0;
+
+            if (desired->alphaBits > 0)
+            {
+                extraDiff += (desired->alphaBits - current->alphaBits) *
+                             (desired->alphaBits - current->alphaBits);
+            }
+
+            if (desired->depthBits > 0)
+            {
+                extraDiff += (desired->depthBits - current->depthBits) *
+                             (desired->depthBits - current->depthBits);
+            }
+
+            if (desired->stencilBits > 0)
+            {
+                extraDiff += (desired->stencilBits - current->stencilBits) *
+                             (desired->stencilBits - current->stencilBits);
+            }
+
+            if (desired->accumRedBits > 0)
+            {
+                extraDiff += (desired->accumRedBits - current->accumRedBits) *
+                             (desired->accumRedBits - current->accumRedBits);
+            }
+
+            if (desired->accumGreenBits > 0)
+            {
+                extraDiff += (desired->accumGreenBits - current->accumGreenBits) *
+                             (desired->accumGreenBits - current->accumGreenBits);
+            }
+
+            if (desired->accumBlueBits > 0)
+            {
+                extraDiff += (desired->accumBlueBits - current->accumBlueBits) *
+                             (desired->accumBlueBits - current->accumBlueBits);
+            }
+
+            if (desired->accumAlphaBits > 0)
+            {
+                extraDiff += (desired->accumAlphaBits - current->accumAlphaBits) *
+                             (desired->accumAlphaBits - current->accumAlphaBits);
+            }
+
+            if (desired->samples > 0)
+            {
+                extraDiff += (desired->samples - current->samples) *
+                             (desired->samples - current->samples);
+            }
+
+            if (desired->sRGB)
+            {
+                if (!current->sRGB)
+                    extraDiff++;
+            }
+        }
+
+        // Figure out if the current one is better than the best one found so far
+        // Least number of missing buffers is the most important heuristic,
+        // then color buffer size match and lastly size match for other buffers
+
+        if (missing < leastMissing)
+            closest = current;
+        else if (missing == leastMissing)
+        {
+            if ((colorDiff < leastColorDiff) ||
+                (colorDiff == leastColorDiff && extraDiff < leastExtraDiff))
+            {
+                closest = current;
+            }
+        }
+
+        if (current == closest)
+        {
+            leastMissing = missing;
+            leastColorDiff = colorDiff;
+            leastExtraDiff = extraDiff;
+        }
+    }
+
+    return closest;
+}
+
+GLboolean _glfwRefreshContextAttribs(void)
 {
     _GLFWwindow* window = _glfwPlatformGetCurrentContext();
 
@@ -248,8 +402,8 @@ GLboolean _glfwRefreshContextParams(void)
             else if (glfwExtensionSupported("GL_ARB_debug_output"))
             {
                 // HACK: This is a workaround for older drivers (pre KHR_debug)
-                // not setting the debug bit in the context flags for debug
-                // contexts
+                //       not setting the debug bit in the context flags for
+                //       debug contexts
                 window->glDebug = GL_TRUE;
             }
         }
@@ -265,13 +419,21 @@ GLboolean _glfwRefreshContextParams(void)
                 window->glProfile = GLFW_OPENGL_COMPAT_PROFILE;
             else if (mask & GL_CONTEXT_CORE_PROFILE_BIT)
                 window->glProfile = GLFW_OPENGL_CORE_PROFILE;
+            else if (glfwExtensionSupported("GL_ARB_compatibility"))
+            {
+                // HACK: This is a workaround for the compatibility profile bit
+                //       not being set in the context flags if an OpenGL 3.2+
+                //       context was created without having requested a specific
+                //       version
+                window->glProfile = GLFW_OPENGL_COMPAT_PROFILE;
+            }
         }
 
         // Read back robustness strategy
         if (glfwExtensionSupported("GL_ARB_robustness"))
         {
             // NOTE: We avoid using the context flags for detection, as they are
-            // only present from 3.0 while the extension applies from 1.1
+            //       only present from 3.0 while the extension applies from 1.1
 
             GLint strategy;
             glGetIntegerv(GL_RESET_NOTIFICATION_STRATEGY_ARB, &strategy);
@@ -288,7 +450,7 @@ GLboolean _glfwRefreshContextParams(void)
         if (glfwExtensionSupported("GL_EXT_robustness"))
         {
             // NOTE: The values of these constants match those of the OpenGL ARB
-            // one, so we can reuse them here
+            //       one, so we can reuse them here
 
             GLint strategy;
             glGetIntegerv(GL_RESET_NOTIFICATION_STRATEGY_ARB, &strategy);
@@ -412,7 +574,7 @@ GLFWAPI int glfwExtensionSupported(const char* extension)
         return GL_FALSE;
     }
 
-    if (extension == NULL || *extension == '\0')
+    if (!extension || *extension == '\0')
     {
         _glfwInputError(GLFW_INVALID_VALUE, NULL);
         return GL_FALSE;
@@ -423,11 +585,15 @@ GLFWAPI int glfwExtensionSupported(const char* extension)
         // Check if extension is in the old style OpenGL extensions string
 
         extensions = glGetString(GL_EXTENSIONS);
-        if (extensions != NULL)
+        if (!extensions)
         {
-            if (_glfwStringInExtensionString(extension, extensions))
-                return GL_TRUE;
+            _glfwInputError(GLFW_PLATFORM_ERROR,
+                            "Failed to retrieve extension string");
+            return GL_FALSE;
         }
+
+        if (_glfwStringInExtensionString(extension, extensions))
+            return GL_TRUE;
     }
 #if defined(_GLFW_USE_OPENGL)
     else
@@ -441,11 +607,16 @@ GLFWAPI int glfwExtensionSupported(const char* extension)
 
         for (i = 0;  i < count;  i++)
         {
-             if (strcmp((const char*) window->GetStringi(GL_EXTENSIONS, i),
-                         extension) == 0)
-             {
-                 return GL_TRUE;
-             }
+            const char* en = (const char*) window->GetStringi(GL_EXTENSIONS, i);
+            if (!en)
+            {
+                _glfwInputError(GLFW_PLATFORM_ERROR,
+                                "Failed to retrieve extension string %i", i);
+                return GL_FALSE;
+            }
+
+            if (strcmp(en, extension) == 0)
+                return GL_TRUE;
         }
     }
 #endif // _GLFW_USE_OPENGL

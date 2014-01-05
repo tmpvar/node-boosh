@@ -1,8 +1,5 @@
 //========================================================================
-// GLFW - An OpenGL library
-// Platform:    Any
-// API version: 3.0
-// WWW:         http://www.glfw.org/
+// GLFW 3.0 - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2010 Camilla Berglund <elmindreda@elmindreda.org>
@@ -32,7 +29,11 @@
 #define _internal_h_
 
 
-#include "config.h"
+#if defined(_GLFW_USE_CONFIG_H)
+ #include "glfw_config.h"
+#endif
+
+#define _GLFW_VERSION_NUMBER "3.1.0"
 
 #if defined(_GLFW_USE_OPENGL)
  // This is the default for glfw3.h
@@ -48,7 +49,7 @@
 // inclusion of our own, newer glext.h below
 #define GL_GLEXT_LEGACY
 
-#include "../include/GL/glfw3.h"
+#include "../include/GLFW/glfw3.h"
 
 #if defined(_GLFW_USE_OPENGL)
  // This path may need to be changed if you build GLFW using your own setup
@@ -120,44 +121,19 @@ typedef struct _GLFWmonitor     _GLFWmonitor;
         return x;                                    \
     }
 
+// Swaps the provided pointers
+#define _GLFW_SWAP_POINTERS(x, y) \
+    {                             \
+        void* t;                  \
+        t = x;                    \
+        x = y;                    \
+        y = t;                    \
+    }
+
 
 //========================================================================
 // Internal types
 //========================================================================
-
-/*! @brief Window, framebuffer and context hints.
- *
- *  It is used only by shared code and only to store parameters passed to us by
- *  @ref glfwWindowHint for use by @ref glfwCreateWindow.
- */
-struct _GLFWhints
-{
-    int         redBits;
-    int         greenBits;
-    int         blueBits;
-    int         alphaBits;
-    int         depthBits;
-    int         stencilBits;
-    int         accumRedBits;
-    int         accumGreenBits;
-    int         accumBlueBits;
-    int         accumAlphaBits;
-    int         auxBuffers;
-    GLboolean   stereo;
-    GLboolean   resizable;
-    GLboolean   visible;
-    GLboolean   decorated;
-    int         samples;
-    GLboolean   sRGB;
-    int         clientAPI;
-    int         glMajor;
-    int         glMinor;
-    GLboolean   glForward;
-    GLboolean   glDebug;
-    int         glProfile;
-    int         glRobustness;
-};
-
 
 /*! @brief Window and context configuration.
  *
@@ -187,8 +163,11 @@ struct _GLFWwndconfig
 
 /*! @brief Framebuffer configuration.
  *
- *  This describes buffers and their sizes.  It is used to pass framebuffer
- *  parameters from shared code to the platform API.
+ *  This describes buffers and their sizes.  It also contains
+ *  a platform-specific ID used to map back to the backend API's object.
+ *
+ *  It is used to pass framebuffer parameters from shared code to the platform
+ *  API and also to enumerate and select available framebuffer configs.
  */
 struct _GLFWfbconfig
 {
@@ -206,6 +185,9 @@ struct _GLFWfbconfig
     GLboolean   stereo;
     int         samples;
     GLboolean   sRGB;
+
+    // This is defined in the context API's platform.h
+    _GLFW_PLATFORM_FBCONFIG;
 };
 
 
@@ -244,18 +226,19 @@ struct _GLFWwindow
 #endif
 
     struct {
-        GLFWwindowposfun     pos;
-        GLFWwindowsizefun    size;
-        GLFWwindowclosefun   close;
-        GLFWwindowrefreshfun refresh;
-        GLFWwindowfocusfun   focus;
-        GLFWwindowiconifyfun iconify;
-        GLFWmousebuttonfun   mouseButton;
-        GLFWcursorposfun     cursorPos;
-        GLFWcursorenterfun   cursorEnter;
-        GLFWscrollfun        scroll;
-        GLFWkeyfun           key;
-        GLFWcharfun          character;
+        GLFWwindowposfun        pos;
+        GLFWwindowsizefun       size;
+        GLFWwindowclosefun      close;
+        GLFWwindowrefreshfun    refresh;
+        GLFWwindowfocusfun      focus;
+        GLFWwindowiconifyfun    iconify;
+        GLFWframebuffersizefun  fbsize;
+        GLFWmousebuttonfun      mouseButton;
+        GLFWcursorposfun        cursorPos;
+        GLFWcursorenterfun      cursorEnter;
+        GLFWscrollfun           scroll;
+        GLFWkeyfun              key;
+        GLFWcharfun             character;
     } callbacks;
 
     // This is defined in the window API's platform.h
@@ -276,9 +259,10 @@ struct _GLFWmonitor
 
     GLFWvidmode*    modes;
     int             modeCount;
+    GLFWvidmode     currentMode;
 
     GLFWgammaramp   originalRamp;
-    GLboolean       rampChanged;
+    GLFWgammaramp   currentRamp;
 
     // This is defined in the window API's platform.h
     _GLFW_PLATFORM_MONITOR_STATE;
@@ -289,7 +273,33 @@ struct _GLFWmonitor
  */
 struct _GLFWlibrary
 {
-    _GLFWhints      hints;
+    struct {
+        int         redBits;
+        int         greenBits;
+        int         blueBits;
+        int         alphaBits;
+        int         depthBits;
+        int         stencilBits;
+        int         accumRedBits;
+        int         accumGreenBits;
+        int         accumBlueBits;
+        int         accumAlphaBits;
+        int         auxBuffers;
+        GLboolean   stereo;
+        GLboolean   resizable;
+        GLboolean   visible;
+        GLboolean   decorated;
+        int         samples;
+        GLboolean   sRGB;
+        int         refreshRate;
+        int         clientAPI;
+        int         glMajor;
+        int         glMinor;
+        GLboolean   glForward;
+        GLboolean   glDebug;
+        int         glProfile;
+        int         glRobustness;
+    } hints;
 
     double          cursorPosX, cursorPosY;
 
@@ -298,7 +308,10 @@ struct _GLFWlibrary
 
     _GLFWmonitor**  monitors;
     int             monitorCount;
-    GLFWmonitorfun  monitorCallback;
+
+    struct {
+        GLFWmonitorfun  monitor;
+    } callbacks;
 
     // This is defined in the window API's platform.h
     _GLFW_PLATFORM_LIBRARY_WINDOW_STATE;
@@ -410,20 +423,20 @@ void _glfwPlatformSetClipboardString(_GLFWwindow* window, const char* string);
  */
 const char* _glfwPlatformGetClipboardString(_GLFWwindow* window);
 
-/*! @copydoc glfwGetJoystickParam
+/*! @copydoc glfwJoystickPresent
  *  @ingroup platform
  */
-int _glfwPlatformGetJoystickParam(int joy, int param);
+int _glfwPlatformJoystickPresent(int joy);
 
 /*! @copydoc glfwGetJoystickAxes
  *  @ingroup platform
  */
-int _glfwPlatformGetJoystickAxes(int joy, float* axes, int numaxes);
+const float* _glfwPlatformGetJoystickAxes(int joy, int* count);
 
 /*! @copydoc glfwGetJoystickButtons
  *  @ingroup platform
  */
-int _glfwPlatformGetJoystickButtons(int joy, unsigned char* buttons, int numbuttons);
+const unsigned char* _glfwPlatformGetJoystickButtons(int joy, int* count);
 
 /*! @copydoc glfwGetJoystickName
  *  @ingroup platform
@@ -474,6 +487,11 @@ void _glfwPlatformGetWindowSize(_GLFWwindow* window, int* width, int* height);
  *  @ingroup platform
  */
 void _glfwPlatformSetWindowSize(_GLFWwindow* window, int width, int height);
+
+/*! @copydoc glfwGetFramebufferSize
+ *  @ingroup platform
+ */
+void _glfwPlatformGetFramebufferSize(_GLFWwindow* window, int* width, int* height);
 
 /*! @copydoc glfwIconifyWindow
  *  @ingroup platform
@@ -563,6 +581,14 @@ void _glfwInputWindowPos(_GLFWwindow* window, int xpos, int ypos);
  */
 void _glfwInputWindowSize(_GLFWwindow* window, int width, int height);
 
+/*! @brief Notifies shared code of a framebuffer resize event.
+ *  @param[in] window The window that received the event.
+ *  @param[in] width The new width, in pixels, of the framebuffer.
+ *  @param[in] height The new height, in pixels, of the framebuffer.
+ *  @ingroup event
+ */
+void _glfwInputFramebufferSize(_GLFWwindow* window, int width, int height);
+
 /*! @brief Notifies shared code of a window iconification event.
  *  @param[in] window The window that received the event.
  *  @param[in] iconified `GL_TRUE` if the window was iconified, or `GL_FALSE`
@@ -593,17 +619,19 @@ void _glfwInputWindowCloseRequest(_GLFWwindow* window);
 /*! @brief Notifies shared code of a physical key event.
  *  @param[in] window The window that received the event.
  *  @param[in] key The key that was pressed or released.
+ *  @param[in] scancode The system-specific scan code of the key.
  *  @param[in] action @ref GLFW_PRESS or @ref GLFW_RELEASE.
+ *  @param[in] mods The modifiers pressed when the event was generated.
  *  @ingroup event
  */
-void _glfwInputKey(_GLFWwindow* window, int key, int action);
+void _glfwInputKey(_GLFWwindow* window, int key, int scancode, int action, int mods);
 
 /*! @brief Notifies shared code of a Unicode character input event.
  *  @param[in] window The window that received the event.
- *  @param[in] character The Unicode code point of the input character.
+ *  @param[in] codepoint The Unicode code point of the input character.
  *  @ingroup event
  */
-void _glfwInputChar(_GLFWwindow* window, unsigned int character);
+void _glfwInputChar(_GLFWwindow* window, unsigned int codepoint);
 
 /*! @brief Notifies shared code of a scroll event.
  *  @param[in] window The window that received the event.
@@ -619,7 +647,7 @@ void _glfwInputScroll(_GLFWwindow* window, double x, double y);
  *  @param[in] action @ref GLFW_PRESS or @ref GLFW_RELEASE.
  *  @ingroup event
  */
-void _glfwInputMouseClick(_GLFWwindow* window, int button, int action);
+void _glfwInputMouseClick(_GLFWwindow* window, int button, int action, int mods);
 
 /*! @brief Notifies shared code of a cursor motion event.
  *  @param[in] window The window that received the event.
@@ -679,15 +707,27 @@ void _glfwSplitBPP(int bpp, int* red, int* green, int* blue);
  */
 int _glfwStringInExtensionString(const char* string, const GLubyte* extensions);
 
-/*! @brief Checks and reads back properties from the current context.
+/*! @brief Chooses the framebuffer config that best matches the desired one.
+ *  @param[in] desired The desired framebuffer config.
+ *  @param[in] alternatives The framebuffer configs supported by the system.
+ *  @param[in] count The number of entries in the alternatives array.
+ *  @return The framebuffer config most closely matching the desired one, or @c
+ *  NULL if none fulfilled the hard constraints of the desired values.
+ *  @ingroup utility
+ */
+const _GLFWfbconfig* _glfwChooseFBConfig(const _GLFWfbconfig* desired,
+                                         const _GLFWfbconfig* alternatives,
+                                         unsigned int count);
+
+/*! @brief Retrieves the attributes of the current context.
  *  @return `GL_TRUE` if successful, or `GL_FALSE` if the context is unusable.
  *  @ingroup utility
  */
-GLboolean _glfwRefreshContextParams(void);
+GLboolean _glfwRefreshContextAttribs(void);
 
-/*! @brief Checks whether the desired context properties are valid.
- *  @param[in] wndconfig The context properties to check.
- *  @return `GL_TRUE` if the context properties are valid, or `GL_FALSE`
+/*! @brief Checks whether the desired context attributes are valid.
+ *  @param[in] wndconfig The context attributes to check.
+ *  @return `GL_TRUE` if the context attributes are valid, or `GL_FALSE`
  *  otherwise.
  *  @ingroup utility
  *
@@ -699,7 +739,7 @@ GLboolean _glfwIsValidContextConfig(_GLFWwndconfig* wndconfig);
 
 /*! @brief Checks whether the current context fulfils the specified hard
  *  constraints.
- *  @param[in] wndconfig The desired context properties.
+ *  @param[in] wndconfig The desired context attributes.
  *  @return `GL_TRUE` if the context fulfils the hard constraints, or `GL_FALSE`
  *  otherwise.
  *  @ingroup utility
@@ -708,9 +748,24 @@ GLboolean _glfwIsValidContext(_GLFWwndconfig* wndconfig);
 
 /*! @ingroup utility
  */
-_GLFWmonitor* _glfwCreateMonitor(const char* name, int widthMM, int heightMM);
+void _glfwAllocGammaArrays(GLFWgammaramp* ramp, unsigned int size);
 
 /*! @ingroup utility
+ */
+void _glfwFreeGammaArrays(GLFWgammaramp* ramp);
+
+/*! @brief Allocates and returns a monitor object with the specified name
+ *  and dimensions.
+ *  @param[in] name The name of the monitor.
+ *  @param[in] widthMM The width, in mm, of the monitor's display area.
+ *  @param[in] heightMM The height, in mm, of the monitor's display area.
+ *  @return The newly created object.
+ *  @ingroup utility
+ */
+_GLFWmonitor* _glfwCreateMonitor(const char* name, int widthMM, int heightMM);
+
+/*! @brief Frees a monitor object and any data associated with it.
+ *  @ingroup utility
   */
 void _glfwDestroyMonitor(_GLFWmonitor* monitor);
 

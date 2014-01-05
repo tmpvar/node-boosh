@@ -1,8 +1,5 @@
 //========================================================================
-// GLFW - An OpenGL library
-// Platform:    Cocoa
-// API Version: 3.0
-// WWW:         http://www.glfw.org/
+// GLFW 3.0 OS X - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2009-2010 Camilla Berglund <elmindreda@elmindreda.org>
 //
@@ -78,18 +75,17 @@ typedef struct _GLFWwindowNS
 //------------------------------------------------------------------------
 typedef struct
 {
-    int present;
-    char name[256];
+    int             present;
+    char            name[256];
 
     IOHIDDeviceInterface** interface;
 
-    int numAxes;
-    int numButtons;
-    int numHats;
+    CFMutableArrayRef axisElements;
+    CFMutableArrayRef buttonElements;
+    CFMutableArrayRef hatElements;
 
-    CFMutableArrayRef axes;
-    CFMutableArrayRef buttons;
-    CFMutableArrayRef hats;
+    float*          axes;
+    unsigned char*  buttons;
 
 } _GLFWjoy;
 

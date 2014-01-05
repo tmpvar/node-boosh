@@ -1,8 +1,5 @@
 //========================================================================
-// GLFW - An OpenGL library
-// Platform:    WGL
-// API version: 3.0
-// WWW:         http://www.glfw.org/
+// GLFW 3.0 WGL - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2010 Camilla Berglund <elmindreda@elmindreda.org>
@@ -37,6 +34,7 @@
 #include "../deps/GL/wglext.h"
 
 
+#define _GLFW_PLATFORM_FBCONFIG             int             wgl
 #define _GLFW_PLATFORM_CONTEXT_STATE        _GLFWcontextWGL wgl
 #define _GLFW_PLATFORM_LIBRARY_OPENGL_STATE _GLFWlibraryWGL wgl
 
@@ -56,7 +54,7 @@ typedef struct _GLFWcontextWGL
 
     // Platform specific extensions (context specific)
     PFNWGLSWAPINTERVALEXTPROC           SwapIntervalEXT;
-    PFNWGLCHOOSEPIXELFORMATARBPROC      ChoosePixelFormatARB;
+    PFNWGLGETPIXELFORMATATTRIBIVARBPROC GetPixelFormatAttribivARB;
     PFNWGLGETEXTENSIONSSTRINGEXTPROC    GetExtensionsStringEXT;
     PFNWGLGETEXTENSIONSSTRINGARBPROC    GetExtensionsStringARB;
     PFNWGLCREATECONTEXTATTRIBSARBPROC   CreateContextAttribsARB;
@@ -76,8 +74,13 @@ typedef struct _GLFWcontextWGL
 //------------------------------------------------------------------------
 typedef struct _GLFWlibraryWGL
 {
-    GLboolean   hasTLS;
-    DWORD       tls;
+    GLboolean       hasTLS;
+    DWORD           current;
+
+    // opengl32.dll
+    struct {
+        HINSTANCE   instance;
+    } opengl32;
 
 } _GLFWlibraryWGL;
 

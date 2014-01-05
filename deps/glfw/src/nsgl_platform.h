@@ -1,8 +1,5 @@
 //========================================================================
-// GLFW - An OpenGL library
-// Platform:    NSOpenGL
-// API Version: 3.0
-// WWW:         http://www.glfw.org/
+// GLFW 3.0 OS X - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2009-2010 Camilla Berglund <elmindreda@elmindreda.org>
 //
@@ -31,6 +28,7 @@
 #define _nsgl_platform_h_
 
 
+#define _GLFW_PLATFORM_FBCONFIG
 #define _GLFW_PLATFORM_CONTEXT_STATE        _GLFWcontextNSGL nsgl
 #define _GLFW_PLATFORM_LIBRARY_OPENGL_STATE _GLFWlibraryNSGL nsgl
 
@@ -55,7 +53,11 @@ typedef struct _GLFWcontextNSGL
 typedef struct _GLFWlibraryNSGL
 {
     // dlopen handle for dynamically loading OpenGL extension entry points
-    void*            framework;
+    void*           framework;
+
+    // TLS key for per-thread current context/window
+    pthread_key_t   current;
+
 } _GLFWlibraryNSGL;
 
 

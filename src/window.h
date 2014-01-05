@@ -13,7 +13,7 @@
 
 #include <node.h>
 #include <Context2D.h>
-#include <GL/glfw3.h>
+#include <GLFW/glfw3.h>
 #include <uv.h>
 
 using namespace v8;

@@ -8,17 +8,8 @@ else()
     link_libraries(${glfw_LIBRARIES})
 endif()
 
-list(APPEND thread_LIBRARIES ${CMAKE_THREAD_LIBS_INIT})
-if (UNIX AND NOT APPLE)
-    list(APPEND thread_LIBRARIES ${RT_LIBRARY})
-endif()
-
 include_directories(${GLFW_SOURCE_DIR}/include
                     ${GLFW_SOURCE_DIR}/deps)
-
-if (MSVC)
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-endif()
 
 if (NOT APPLE)
     # HACK: This is NOTFOUND on OS X 10.8
@@ -32,9 +23,8 @@ set(TINYCTHREAD ${GLFW_SOURCE_DIR}/deps/tinycthread.h
 
 add_executable(clipboard clipboard.c ${GETOPT})
 add_executable(defaults defaults.c)
-add_executable(events events.c)
+add_executable(events events.c ${GETOPT})
 add_executable(fsaa fsaa.c ${GETOPT})
-add_executable(fsfocus fsfocus.c)
 add_executable(gamma gamma.c ${GETOPT})
 add_executable(glfwinfo glfwinfo.c ${GETOPT})
 add_executable(iconify iconify.c ${GETOPT})
@@ -61,11 +51,10 @@ set_target_properties(title PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "Title")
 add_executable(windows WIN32 MACOSX_BUNDLE windows.c)
 set_target_properties(windows PROPERTIES MACOSX_BUNDLE_BUNDLE_NAME "Windows")
 
-target_link_libraries(threads ${thread_LIBRARIES})
-
+target_link_libraries(threads ${CMAKE_THREAD_LIBS_INIT} ${RT_LIBRARY})
 
 set(WINDOWS_BINARIES accuracy sharing tearing threads title windows)
-set(CONSOLE_BINARIES clipboard defaults events fsaa fsfocus gamma glfwinfo
+set(CONSOLE_BINARIES clipboard defaults events fsaa gamma glfwinfo
                      iconify joysticks modes peter reopen)
 
 if (MSVC)

@@ -1,8 +1,5 @@
 //========================================================================
-// GLFW - An OpenGL library
-// Platform:    EGL
-// API version: 3.0
-// WWW:         http://www.glfw.org/
+// GLFW 3.0 EGL - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2010 Camilla Berglund <elmindreda@elmindreda.org>
@@ -100,6 +97,107 @@ static const char* getErrorString(EGLint error)
     return "UNKNOWN EGL ERROR";
 }
 
+// Returns the specified attribute of the specified EGLConfig
+//
+static int getConfigAttrib(EGLConfig config, int attrib)
+{
+    int value;
+    eglGetConfigAttrib(_glfw.egl.display, config, attrib, &value);
+    return value;
+}
+
+// Return a list of available and usable framebuffer configs
+//
+static GLboolean chooseFBConfigs(const _GLFWwndconfig* wndconfig,
+                                 const _GLFWfbconfig* desired,
+                                 EGLConfig* result)
+{
+    EGLConfig* nativeConfigs;
+    _GLFWfbconfig* usableConfigs;
+    const _GLFWfbconfig* closest;
+    int i, nativeCount, usableCount;
+
+    eglGetConfigs(_glfw.egl.display, NULL, 0, &nativeCount);
+    if (!nativeCount)
+    {
+        _glfwInputError(GLFW_API_UNAVAILABLE, "EGL: No EGLConfigs returned");
+        return GL_FALSE;
+    }
+
+    nativeConfigs = calloc(nativeCount, sizeof(EGLConfig));
+    eglGetConfigs(_glfw.egl.display, nativeConfigs, nativeCount, &nativeCount);
+
+    usableConfigs = calloc(nativeCount, sizeof(_GLFWfbconfig));
+    usableCount = 0;
+
+    for (i = 0;  i < nativeCount;  i++)
+    {
+        const EGLConfig n = nativeConfigs[i];
+        _GLFWfbconfig* u = usableConfigs + usableCount;
+
+#if defined(_GLFW_X11)
+        if (!getConfigAttrib(n, EGL_NATIVE_VISUAL_ID))
+        {
+            // Only consider EGLConfigs with associated visuals
+            continue;
+        }
+#endif // _GLFW_X11
+
+        if (!(getConfigAttrib(n, EGL_COLOR_BUFFER_TYPE) & EGL_RGB_BUFFER))
+        {
+            // Only consider RGB(A) EGLConfigs
+            continue;
+        }
+
+        if (!(getConfigAttrib(n, EGL_SURFACE_TYPE) & EGL_WINDOW_BIT))
+        {
+            // Only consider window EGLConfigs
+            continue;
+        }
+
+        if (wndconfig->clientAPI == GLFW_OPENGL_ES_API)
+        {
+            if (wndconfig->glMajor == 1)
+            {
+                if (!(getConfigAttrib(n, EGL_RENDERABLE_TYPE) & EGL_OPENGL_ES_BIT))
+                    continue;
+            }
+            else
+            {
+                if (!(getConfigAttrib(n, EGL_RENDERABLE_TYPE) & EGL_OPENGL_ES2_BIT))
+                    continue;
+            }
+        }
+        else if (wndconfig->clientAPI == GLFW_OPENGL_API)
+        {
+            if (!(getConfigAttrib(n, EGL_RENDERABLE_TYPE) & EGL_OPENGL_BIT))
+                continue;
+        }
+
+        u->redBits = getConfigAttrib(n, EGL_RED_SIZE);
+        u->greenBits = getConfigAttrib(n, EGL_GREEN_SIZE);
+        u->blueBits = getConfigAttrib(n, EGL_BLUE_SIZE);
+
+        u->alphaBits = getConfigAttrib(n, EGL_ALPHA_SIZE);
+        u->depthBits = getConfigAttrib(n, EGL_DEPTH_SIZE);
+        u->stencilBits = getConfigAttrib(n, EGL_STENCIL_SIZE);
+
+        u->samples = getConfigAttrib(n, EGL_SAMPLES);
+
+        u->egl = n;
+        usableCount++;
+    }
+
+    closest = _glfwChooseFBConfig(desired, usableConfigs, usableCount);
+    if (closest)
+        *result = closest->egl;
+
+    free(nativeConfigs);
+    free(usableConfigs);
+
+    return closest ? GL_TRUE : GL_FALSE;
+}
+
 
 //////////////////////////////////////////////////////////////////////////
 //////                       GLFW internal API                      //////
@@ -109,7 +207,7 @@ static const char* getErrorString(EGLint error)
 //
 int _glfwInitContextAPI(void)
 {
-    _glfw.egl.display = eglGetDisplay(_GLFW_EGL_NATIVE_DISPLAY);
+    _glfw.egl.display = eglGetDisplay((EGLNativeDisplayType)_GLFW_EGL_NATIVE_DISPLAY);
     if (_glfw.egl.display == EGL_NO_DISPLAY)
     {
         _glfwInputError(GLFW_API_UNAVAILABLE,
@@ -145,7 +243,7 @@ void _glfwTerminateContextAPI(void)
 { \
     attribs[index++] = attribName; \
     attribs[index++] = attribValue; \
-    assert(index < sizeof(attribs) / sizeof(attribs[0])); \
+    assert((size_t) index < sizeof(attribs) / sizeof(attribs[0])); \
 }
 
 // Prepare for creation of the OpenGL context
@@ -162,57 +260,11 @@ int _glfwCreateContext(_GLFWwindow* window,
     if (wndconfig->share)
         share = wndconfig->share->egl.context;
 
-    // Find a suitable EGLConfig
+    if (!chooseFBConfigs(wndconfig, fbconfig, &config))
     {
-        int index = 0;
-
-        if (wndconfig->clientAPI == GLFW_OPENGL_API)
-            setEGLattrib(EGL_RENDERABLE_TYPE, EGL_OPENGL_BIT);
-
-        if (wndconfig->clientAPI == GLFW_OPENGL_ES_API)
-        {
-            if (wndconfig->glMajor == 1)
-                setEGLattrib(EGL_RENDERABLE_TYPE, EGL_OPENGL_ES_BIT);
-
-            if (wndconfig->glMajor == 2)
-                setEGLattrib(EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT);
-
-            if (wndconfig->glMajor == 3)
-                setEGLattrib(EGL_RENDERABLE_TYPE, EGL_OPENGL_ES3_BIT_KHR);
-        }
-
-        setEGLattrib(EGL_COLOR_BUFFER_TYPE, EGL_RGB_BUFFER);
-
-        if (fbconfig->redBits)
-            setEGLattrib(EGL_RED_SIZE, fbconfig->redBits);
-        if (fbconfig->greenBits)
-            setEGLattrib(EGL_GREEN_SIZE, fbconfig->greenBits);
-        if (fbconfig->blueBits)
-            setEGLattrib(EGL_BLUE_SIZE, fbconfig->blueBits);
-        if (fbconfig->alphaBits)
-            setEGLattrib(EGL_ALPHA_SIZE, fbconfig->alphaBits);
-
-        if (fbconfig->depthBits)
-            setEGLattrib(EGL_DEPTH_SIZE, fbconfig->depthBits);
-        if (fbconfig->stencilBits)
-            setEGLattrib(EGL_STENCIL_SIZE, fbconfig->stencilBits);
-
-        if (fbconfig->samples)
-        {
-            setEGLattrib(EGL_SAMPLE_BUFFERS, 1);
-            setEGLattrib(EGL_SAMPLES, fbconfig->samples);
-        }
-
-        setEGLattrib(EGL_NONE, EGL_NONE);
-
-        eglChooseConfig(_glfw.egl.display, attribs, &config, 1, &count);
-        if (!count)
-        {
-            _glfwInputError(GLFW_PLATFORM_ERROR,
-                            "EGL: Failed to find a suitable EGLConfig: %s",
-                            getErrorString(eglGetError()));
-            return GL_FALSE;
-        }
+        _glfwInputError(GLFW_PLATFORM_ERROR,
+                        "EGL: Failed to find a suitable EGLConfig");
+        return GL_FALSE;
     }
 
 #if defined(_GLFW_X11)
@@ -409,7 +461,7 @@ void _glfwPlatformMakeContextCurrent(_GLFWwindow* window)
         {
             window->egl.surface = eglCreateWindowSurface(_glfw.egl.display,
                                                          window->egl.config,
-                                                         _GLFW_EGL_NATIVE_WINDOW,
+                                                         (EGLNativeWindowType)_GLFW_EGL_NATIVE_WINDOW,
                                                          NULL);
             if (window->egl.surface == EGL_NO_SURFACE)
             {

@@ -1,8 +1,5 @@
 //========================================================================
-// GLFW - An OpenGL library
-// Platform:    X11/GLX
-// API version: 3.0
-// WWW:         http://www.glfw.org/
+// GLFW 3.0 GLX - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2010 Camilla Berglund <elmindreda@elmindreda.org>
@@ -44,6 +41,8 @@
  #include <dlfcn.h>
 #endif
 
+#include <pthread.h>
+
 // We support four different ways for getting addresses for GL/GLX
 // extension functions: glXGetProcAddress, glXGetProcAddressARB,
 // glXGetProcAddressEXT, and dlsym
@@ -60,6 +59,7 @@
  #error "No OpenGL entry point retrieval mechanism was enabled"
 #endif
 
+#define _GLFW_PLATFORM_FBCONFIG             GLXFBConfig     glx
 #define _GLFW_PLATFORM_CONTEXT_STATE        _GLFWcontextGLX glx
 #define _GLFW_PLATFORM_LIBRARY_OPENGL_STATE _GLFWlibraryGLX glx
 
@@ -92,6 +92,9 @@ typedef struct _GLFWlibraryGLX
     int             versionMajor, versionMinor;
     int             eventBase;
     int             errorBase;
+
+    // TLS key for per-thread current context/window
+    pthread_key_t   current;
 
     // GLX extensions
     PFNGLXSWAPINTERVALSGIPROC             SwapIntervalSGI;

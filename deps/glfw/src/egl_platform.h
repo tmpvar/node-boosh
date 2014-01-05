@@ -1,8 +1,5 @@
 //========================================================================
-// GLFW - An OpenGL library
-// Platform:    EGL
-// API version: 3.0
-// WWW:         http://www.glfw.org/
+// GLFW 3.0 EGL - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2010 Camilla Berglund <elmindreda@elmindreda.org>
@@ -43,6 +40,7 @@
  #include <dlfcn.h>
 #endif
 
+#define _GLFW_PLATFORM_FBCONFIG             EGLConfig       egl
 #define _GLFW_PLATFORM_CONTEXT_STATE        _GLFWcontextEGL egl
 #define _GLFW_PLATFORM_LIBRARY_OPENGL_STATE _GLFWlibraryEGL egl
 

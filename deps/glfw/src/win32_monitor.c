@@ -1,8 +1,5 @@
 //========================================================================
-// GLFW - An OpenGL library
-// Platform:    X11 (Unix)
-// API version: 3.0
-// WWW:         http://www.glfw.org/
+// GLFW 3.0 Win32 - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2010 Camilla Berglund <elmindreda@elmindreda.org>
@@ -62,11 +59,14 @@ GLboolean _glfwSetVideoMode(_GLFWmonitor* monitor, const GLFWvidmode* desired)
     if (_glfwCompareVideoModes(&current, best) == 0)
         return GL_TRUE;
 
+    ZeroMemory(&dm, sizeof(dm));
     dm.dmSize = sizeof(DEVMODE);
-    dm.dmFields     = DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL;
-    dm.dmPelsWidth  = best->width;
-    dm.dmPelsHeight = best->height;
-    dm.dmBitsPerPel = best->redBits + best->greenBits + best->blueBits;
+    dm.dmFields           = DM_PELSWIDTH | DM_PELSHEIGHT | DM_BITSPERPEL |
+                            DM_DISPLAYFREQUENCY;
+    dm.dmPelsWidth        = best->width;
+    dm.dmPelsHeight       = best->height;
+    dm.dmBitsPerPel       = best->redBits + best->greenBits + best->blueBits;
+    dm.dmDisplayFrequency = best->refreshRate;
 
     if (dm.dmBitsPerPel < 15 || dm.dmBitsPerPel >= 24)
         dm.dmBitsPerPel = 32;
@@ -103,6 +103,8 @@ _GLFWmonitor** _glfwPlatformGetMonitors(int* count)
     _GLFWmonitor** monitors = NULL;
     DWORD adapterIndex = 0;
     int primaryIndex = 0;
+
+    *count = 0;
 
     for (;;)
     {
@@ -149,6 +151,8 @@ _GLFWmonitor** _glfwPlatformGetMonitors(int* count)
             _glfwDestroyMonitors(monitors, found);
             _glfwInputError(GLFW_PLATFORM_ERROR,
                             "Failed to convert string to UTF-8");
+
+            free(monitors);
             return NULL;
         }
 
@@ -176,7 +180,7 @@ _GLFWmonitor** _glfwPlatformGetMonitors(int* count)
 
 GLboolean _glfwPlatformIsSameMonitor(_GLFWmonitor* first, _GLFWmonitor* second)
 {
-    return wcscmp(first->win32.name, second->win32.name);
+    return wcscmp(first->win32.name, second->win32.name) == 0;
 }
 
 void _glfwPlatformGetMonitorPos(_GLFWmonitor* monitor, int* xpos, int* ypos)
@@ -223,8 +227,9 @@ GLFWvidmode* _glfwPlatformGetVideoModes(_GLFWmonitor* monitor, int* found)
             continue;
         }
 
-        mode.width = dm.dmPelsWidth;
+        mode.width  = dm.dmPelsWidth;
         mode.height = dm.dmPelsHeight;
+        mode.refreshRate = dm.dmDisplayFrequency;
         _glfwSplitBPP(dm.dmBitsPerPel,
                       &mode.redBits,
                       &mode.greenBits,
@@ -270,6 +275,7 @@ void _glfwPlatformGetVideoMode(_GLFWmonitor* monitor, GLFWvidmode* mode)
 
     mode->width  = dm.dmPelsWidth;
     mode->height = dm.dmPelsHeight;
+    mode->refreshRate = dm.dmDisplayFrequency;
     _glfwSplitBPP(dm.dmBitsPerPel,
                   &mode->redBits,
                   &mode->greenBits,

@@ -28,7 +28,7 @@
 //
 //========================================================================
 
-#include <GL/glfw3.h>
+#include <GLFW/glfw3.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -56,7 +56,7 @@ static void error_callback(int error, const char* description)
     fprintf(stderr, "Error: %s\n", description);
 }
 
-static void window_size_callback(GLFWwindow* window, int width, int height)
+static void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
@@ -64,43 +64,47 @@ static void window_size_callback(GLFWwindow* window, int width, int height)
 static void draw_joystick(Joystick* j, int x, int y, int width, int height)
 {
     int i;
-    int axis_width, axis_height;
-    int button_width, button_height;
+    const int axis_height = 3 * height / 4;
+    const int button_height = height / 4;
 
-    axis_width = width / j->axis_count;
-    axis_height = 3 * height / 4;
-
-    button_width = width / j->button_count;
-    button_height = height / 4;
-
-    for (i = 0;  i < j->axis_count;  i++)
+    if (j->axis_count)
     {
-        float value = j->axes[i] / 2.f + 0.5f;
+        const int axis_width = width / j->axis_count;
 
-        glColor3f(0.3f, 0.3f, 0.3f);
-        glRecti(x + i * axis_width,
-                y,
-                x + (i + 1) * axis_width,
-                y + axis_height);
+        for (i = 0;  i < j->axis_count;  i++)
+        {
+            float value = j->axes[i] / 2.f + 0.5f;
 
-        glColor3f(1.f, 1.f, 1.f);
-        glRecti(x + i * axis_width,
-                y + (int) (value * (axis_height - 5)),
-                x + (i + 1) * axis_width,
-                y + 5 + (int) (value * (axis_height - 5)));
+            glColor3f(0.3f, 0.3f, 0.3f);
+            glRecti(x + i * axis_width,
+                    y,
+                    x + (i + 1) * axis_width,
+                    y + axis_height);
+
+            glColor3f(1.f, 1.f, 1.f);
+            glRecti(x + i * axis_width,
+                    y + (int) (value * (axis_height - 5)),
+                    x + (i + 1) * axis_width,
+                    y + 5 + (int) (value * (axis_height - 5)));
+        }
     }
 
-    for (i = 0;  i < j->button_count;  i++)
+    if (j->button_count)
     {
-        if (j->buttons[i])
-            glColor3f(1.f, 1.f, 1.f);
-        else
-            glColor3f(0.3f, 0.3f, 0.3f);
+        const int button_width = width / j->button_count;
 
-        glRecti(x + i * button_width,
-                y + axis_height,
-                x + (i + 1) * button_width,
-                y + axis_height + button_height);
+        for (i = 0;  i < j->button_count;  i++)
+        {
+            if (j->buttons[i])
+                glColor3f(1.f, 1.f, 1.f);
+            else
+                glColor3f(0.3f, 0.3f, 0.3f);
+
+            glRecti(x + i * button_width,
+                    y + axis_height,
+                    x + (i + 1) * button_width,
+                    y + axis_height + button_height);
+        }
     }
 }
 
@@ -108,7 +112,7 @@ static void draw_joysticks(GLFWwindow* window)
 {
     int i, width, height;
 
-    glfwGetWindowSize(window, &width, &height);
+    glfwGetFramebufferSize(window, &width, &height);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -136,30 +140,32 @@ static void refresh_joysticks(void)
     {
         Joystick* j = joysticks + i;
 
-        if (glfwGetJoystickParam(GLFW_JOYSTICK_1 + i, GLFW_PRESENT))
+        if (glfwJoystickPresent(GLFW_JOYSTICK_1 + i))
         {
+            const float* axes;
+            const unsigned char* buttons;
             int axis_count, button_count;
 
             free(j->name);
             j->name = strdup(glfwGetJoystickName(GLFW_JOYSTICK_1 + i));
 
-            axis_count = glfwGetJoystickParam(GLFW_JOYSTICK_1 + i, GLFW_AXES);
+            axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1 + i, &axis_count);
             if (axis_count != j->axis_count)
             {
                 j->axis_count = axis_count;
                 j->axes = realloc(j->axes, j->axis_count * sizeof(float));
             }
 
-            glfwGetJoystickAxes(GLFW_JOYSTICK_1 + i, j->axes, j->axis_count);
+            memcpy(j->axes, axes, axis_count * sizeof(float));
 
-            button_count = glfwGetJoystickParam(GLFW_JOYSTICK_1 + i, GLFW_BUTTONS);
+            buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1 + i, &button_count);
             if (button_count != j->button_count)
             {
                 j->button_count = button_count;
                 j->buttons = realloc(j->buttons, j->button_count);
             }
 
-            glfwGetJoystickButtons(GLFW_JOYSTICK_1 + i, j->buttons, j->button_count);
+            memcpy(j->buttons, buttons, button_count * sizeof(unsigned char));
 
             if (!j->present)
             {
@@ -206,7 +212,7 @@ int main(void)
         exit(EXIT_FAILURE);
     }
 
-    glfwSetWindowSizeCallback(window, window_size_callback);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
 
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);

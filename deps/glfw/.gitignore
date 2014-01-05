@@ -1,18 +1,44 @@
+# External junk
 .DS_Store
+_ReSharper*
+*.opensdf
+*.sdf
+*.dir
+*.vcxproj*
+*.sln
+Win32
+Debug
+Release
+
+# CMake files
 Makefile
 CMakeCache.txt
 CMakeFiles
 cmake_install.cmake
 cmake_uninstall.cmake
+
+# Generated files
 docs/Doxyfile
-src/config.h
+docs/html
+docs/warnings.txt
+src/glfw_config.h
 src/glfw3.pc
-src/libglfw3.so
+src/glfwConfig.cmake
+src/glfwConfigVersion.cmake
+
+# Compiled binaries
+src/libglfw.so
+src/libglfw.so.3
+src/libglfw.so.3.0
+src/libglfw.dylib
+src/libglfw.dylib
+src/libglfw.3.dylib
+src/libglfw.3.0.dylib
 src/libglfw3.a
-src/libglfw3.dylib
 src/glfw3.lib
 src/glfw3.dll
 src/glfw3dll.lib
+src/glfw3dll.a
 examples/*.app
 examples/*.exe
 examples/boing
@@ -21,7 +47,6 @@ examples/heightmap
 examples/splitview
 examples/simple
 examples/wave
-src/config.h
 tests/*.app
 tests/*.exe
 tests/accuracy
@@ -29,7 +54,6 @@ tests/clipboard
 tests/defaults
 tests/events
 tests/fsaa
-tests/fsfocus
 tests/gamma
 tests/glfwinfo
 tests/iconify
@@ -44,14 +68,3 @@ tests/title
 tests/version
 tests/windows
 
-# Windows/VS ignores
-*.dir
-*.vcxproj*
-*.sln
-_ReSharper*
-Win32
-examples/Debug
-tests/Debug
-src/Debug
-*.opensdf
-*.sdf

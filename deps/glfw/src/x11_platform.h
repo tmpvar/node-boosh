@@ -1,8 +1,5 @@
 //========================================================================
-// GLFW - An OpenGL library
-// Platform:    X11
-// API version: 3.0
-// WWW:         http://www.glfw.org/
+// GLFW 3.0 X11 - www.glfw.org
 //------------------------------------------------------------------------
 // Copyright (c) 2002-2006 Marcus Geelnard
 // Copyright (c) 2006-2010 Camilla Berglund <elmindreda@elmindreda.org>
@@ -66,12 +63,6 @@
 #define _GLFW_PLATFORM_LIBRARY_WINDOW_STATE _GLFWlibraryX11 x11
 #define _GLFW_PLATFORM_MONITOR_STATE        _GLFWmonitorX11 x11
 
-// Clipboard format atom indices (in order of preference)
-#define _GLFW_CLIPBOARD_FORMAT_UTF8     0
-#define _GLFW_CLIPBOARD_FORMAT_COMPOUND 1
-#define _GLFW_CLIPBOARD_FORMAT_STRING   2
-#define _GLFW_CLIPBOARD_FORMAT_COUNT    3
-
 
 //========================================================================
 // GLFW platform specific types
@@ -91,8 +82,15 @@ typedef struct _GLFWwindowX11
     GLboolean       overrideRedirect; // True if window is OverrideRedirect
     GLboolean       cursorGrabbed;    // True if cursor is currently grabbed
     GLboolean       cursorHidden;     // True if cursor is currently hidden
-    GLboolean       cursorCentered;   // True if cursor was moved since last poll
+
+    // Cached position and size used to filter out duplicate events
+    int             width, height;
+    int             xpos, ypos;
+
+    // The last received cursor position, regardless of source
     double          cursorPosX, cursorPosY;
+    // The last position the cursor was warped to by GLFW
+    int             warpPosX, warpPosY;
 
 } _GLFWwindowX11;
 
@@ -115,20 +113,30 @@ typedef struct _GLFWlibraryX11
     Atom            WM_DELETE_WINDOW;
     Atom            NET_WM_NAME;
     Atom            NET_WM_ICON_NAME;
+    Atom            NET_WM_PID;
     Atom            NET_WM_PING;
     Atom            NET_WM_STATE;
     Atom            NET_WM_STATE_FULLSCREEN;
+    Atom            NET_WM_BYPASS_COMPOSITOR;
     Atom            NET_ACTIVE_WINDOW;
     Atom            MOTIF_WM_HINTS;
 
     // Selection atoms
     Atom            TARGETS;
+    Atom            MULTIPLE;
     Atom            CLIPBOARD;
+    Atom            CLIPBOARD_MANAGER;
+    Atom            SAVE_TARGETS;
     Atom            UTF8_STRING;
     Atom            COMPOUND_STRING;
+    Atom            ATOM_PAIR;
+    Atom            GLFW_SELECTION;
 
     // True if window manager supports EWMH
     GLboolean       hasEWMH;
+
+    // Error code received by the X error handler
+    int             errorCode;
 
     struct {
         GLboolean   available;
@@ -166,7 +174,7 @@ typedef struct _GLFWlibraryX11
     int             keyCodeLUT[256];
 
     struct {
-        GLboolean   changed;
+        int         count;
         int         timeout;
         int         interval;
         int         blanking;
@@ -180,18 +188,16 @@ typedef struct _GLFWlibraryX11
     } timer;
 
     struct {
-        Atom        formats[_GLFW_CLIPBOARD_FORMAT_COUNT];
         char*       string;
-        Atom        property;
     } selection;
 
     struct {
         int         present;
         int         fd;
-        int         numAxes;
-        int         numButtons;
-        float*      axis;
-        unsigned char* button;
+        float*      axes;
+        int         axisCount;
+        unsigned char* buttons;
+        int         buttonCount;
         char*       name;
     } joystick[GLFW_JOYSTICK_LAST + 1];
 
@@ -233,14 +239,16 @@ void _glfwSetVideoMode(_GLFWmonitor* monitor, const GLFWvidmode* desired);
 void _glfwRestoreVideoMode(_GLFWmonitor* monitor);
 
 // Joystick input
-int  _glfwInitJoysticks(void);
+void _glfwInitJoysticks(void);
 void _glfwTerminateJoysticks(void);
 
 // Unicode support
 long _glfwKeySym2Unicode(KeySym keysym);
 
 // Clipboard handling
-Atom _glfwWriteSelection(XSelectionRequestEvent* request);
+void _glfwHandleSelectionClear(XEvent* event);
+void _glfwHandleSelectionRequest(XEvent* event);
+void _glfwPushSelectionToManager(_GLFWwindow* window);
 
 // Window support
 _GLFWwindow* _glfwFindWindowByHandle(Window handle);
@@ -248,5 +256,10 @@ unsigned long _glfwGetWindowProperty(Window window,
                                      Atom property,
                                      Atom type,
                                      unsigned char** value);
+
+// X11 error handler
+void _glfwGrabXErrorHandler(void);
+void _glfwReleaseXErrorHandler(void);
+void _glfwInputXError(int error, const char* message);
 
 #endif // _x11_platform_h_
