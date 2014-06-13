@@ -12,7 +12,7 @@
 #define GLFW_INCLUDE_GLU 1
 
 #include <node.h>
-#include <Context2D.h>
+#include <context2d.h>
 #include <GLFW/glfw3.h>
 #include <uv.h>
 

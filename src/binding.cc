@@ -4,7 +4,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "uv.h"
-#include <Context2D.h>
+#include <context2d.h>
 #include "window.h"
 
 using namespace v8;
