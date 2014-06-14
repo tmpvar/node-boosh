@@ -2,7 +2,7 @@
   "name": "boosh",
   "version": "0.1.0",
   "description": "spawn a window and draw stuff using the html5 canvas api\"",
-  "main": "index.js",
+  "main": "boosh.js",
   "dependencies": {
     "animationframe": "git://github.com/tmpvar/animationframe.git",
     "bindings": "~1.1.0",
