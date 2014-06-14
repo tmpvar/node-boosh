@@ -13,8 +13,12 @@
 
 #include <node.h>
 #include <context2d.h>
+<<<<<<< Updated upstream
+=======
+#include <GL/glew.h>
+#include <GL/glu.h>
+>>>>>>> Stashed changes
 #include <GLFW/glfw3.h>
-#include <uv.h>
 
 using namespace v8;
 using namespace node;

@@ -1,6 +1,8 @@
+#include <node.h>
+
 #include "window.h"
 #include <GLFW/glfw3.h>
-#include <stdio.h>
+
 using namespace v8;
 using namespace node;
 //
@@ -250,19 +252,19 @@ void APIENTRY keyboardKeyCallback(GLFWwindow* window, int key, int scancode, int
     break;
   }
 
-  int shift = glfwGetKey(win->handle, GLFW_KEY_RIGHT_SHIFT) ||
+  bool shift = glfwGetKey(win->handle, GLFW_KEY_RIGHT_SHIFT) ||
               glfwGetKey(win->handle, GLFW_KEY_RIGHT_SHIFT);
 
-  int meta =  glfwGetKey(win->handle, GLFW_KEY_LEFT_SUPER) ||
+  bool meta =  glfwGetKey(win->handle, GLFW_KEY_LEFT_SUPER) ||
               glfwGetKey(win->handle, GLFW_KEY_RIGHT_SUPER);
 
-  int alt = glfwGetKey(win->handle, GLFW_KEY_LEFT_ALT) ||
+  bool alt = glfwGetKey(win->handle, GLFW_KEY_LEFT_ALT) ||
             glfwGetKey(win->handle, GLFW_KEY_LEFT_ALT);
 
-  int control = glfwGetKey(win->handle, GLFW_KEY_RIGHT_CONTROL) ||
+  bool control = glfwGetKey(win->handle, GLFW_KEY_RIGHT_CONTROL) ||
                 glfwGetKey(win->handle, GLFW_KEY_RIGHT_CONTROL);
 
-  int capsLock =  glfwGetKey(win->handle, GLFW_KEY_CAPS_LOCK);
+  bool capsLock =  glfwGetKey(win->handle, GLFW_KEY_CAPS_LOCK) == 1;
 
   if (key >= 65 && key<=90) {
     if (capsLock) {
@@ -458,8 +460,8 @@ Handle<Value> Window::resizeTo(const Arguments& args) {
 
   Window *win = ObjectWrap::Unwrap<Window>(args.This());
 
-  win->width = args[0]->NumberValue();
-  win->height = args[1]->NumberValue();
+  win->width = args[0]->Int32Value();
+  win->height = args[1]->Int32Value();
 
   if (win->handle) {
     glfwSetWindowSize(win->handle, win->width, win->height);
@@ -475,8 +477,8 @@ Handle<Value> Window::moveTo(const Arguments& args) {
 
   Window *win = ObjectWrap::Unwrap<Window>(args.This());
 
-  win->x = args[0]->NumberValue();
-  win->y = args[1]->NumberValue();
+  win->x = args[0]->Int32Value();
+  win->y = args[1]->Int32Value();
 
   if (win->handle) {
     glfwSetWindowPos(win->handle, win->x, win->y);
@@ -509,9 +511,9 @@ void Window::swapBuffers() {
 
     glBegin(GL_QUADS);
       glTexCoord2f(0.0f, 0.0f); glVertex3f( 0.0f, 0.0f,  0);
-      glTexCoord2f(1.0f, 0.0f); glVertex3f( this->width, 0.0f,  0);
-      glTexCoord2f(1.0f, 1.0f); glVertex3f( this->width,  this->height,  0);
-      glTexCoord2f(0.0f, 1.0f); glVertex3f( 0.0f, this->height,  0);
+      glTexCoord2f(1.0f, 0.0f); glVertex3f( (float)this->width, 0.0f,  0);
+      glTexCoord2f(1.0f, 1.0f); glVertex3f( (float)this->width,  (float)this->height,  0);
+      glTexCoord2f(0.0f, 1.0f); glVertex3f( 0.0f, (float)this->height,  0);
     glEnd();
 
     if (this->handle) {
@@ -553,8 +555,8 @@ Handle<Value> Window::getRect(const Arguments& args) {
 Handle<Value> Window::New(const Arguments& args) {
   HandleScope scope;
 
-  int width = args[0]->ToInteger()->Value();
-  int height = args[1]->ToInteger()->Value();
+  int width = args[0]->Int32Value();
+  int height = args[1]->Int32Value();
 
   String::Utf8Value titleString(args[2]->ToString());
 

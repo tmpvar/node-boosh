@@ -1,6 +1,5 @@
 #include <node.h>
-#include <node_buffer.h>
-#include <v8.h>
+
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "uv.h"

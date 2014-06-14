@@ -19,20 +19,40 @@
         'src/binding.cc',
         'src/window.cc'
       ],
+
+      'libraries' : [
+        'opengl32.lib', 'glu32.lib'
+      ],
+
       'include_dirs' : [
         '<@(shared_include_dirs)',
         'deps/glfw/include',
         'node_modules/context2d/src',
         'deps/glew/include'
-      ]
+      ],
+      'msvs_settings': {
+        'VCCLCompilerTool': {
+          'CompileAs': 2, 
+          'RuntimeLibrary': '0',
+          'WarningLevel': '3',
+          'ProgramDataBaseFileName': '$(OutDir)\\$(ProjectName).pdb',
+          'DebugInformationFormat': '3',
+          'ExceptionHandling': '0',
+          'LinkIncremental': '0',
+          'AdditionalOptions': [ '/MP', ]
+        },
+        'VCLinkerTool' : {
+          'LinkIncremental' : '0',
+          'LinkTimeCodeGeneration': '1',
+          'AdditionalOptions': [ '/FORCE:MULTIPLE', ]
+        }
+      }
     },
     {
       'target_name' : 'glew',
       'type' : 'static_library',
       'sources' : [
-        'deps/glew/src/glew.c',
-        'deps/glew/src/glewinfo.c',
-        'deps/glew/src/visualinfo.c'
+        'deps/glew/src/glew.c'
       ],
       'include_dirs' : [
         'deps/glew/include'
@@ -70,6 +90,13 @@
           }
         }],
         ['platform == "win"', {
+          'defines' : [
+            # need angle to get this working
+            #'_GLFW_USE_GLESV2',
+            '_GLFW_USE_OPENGL',
+            '_GLFW_WIN32',
+            '_GLFW_WGL'
+          ],
           'variables': {'platform': 'win32'},
           'sources' : [
             'deps/glfw/src/win32_clipboard.c',
