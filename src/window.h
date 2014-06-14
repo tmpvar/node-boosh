@@ -35,12 +35,13 @@ class Window : public ObjectWrap {
   int width, height, x, y;
   GLuint surfaceTexture[1];
   Persistent<Function> eventCallback;
+  bool hasEventHandler;
   void setupSize();
   void destroy();
   void swapBuffers();
 
  private:
-  Window(int width, int height, const char *title);
+  Window(int width, int height, const char *title, bool fullscreen);
   ~Window();
 
   static uv_timer_t *input_timer;

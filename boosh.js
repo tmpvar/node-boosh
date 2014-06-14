@@ -9,43 +9,16 @@ var AnimationFrame = require('animationframe');
 var events = require('./lib/event');
 
 function Window(options) {
-  options = options || {};
-
-  options.width = options.width || 640;
-  options.height = options.height || 480;
-  options.title = options.title || 'boosh!';
-  options.fullscreen = options.fullscreen || false;
-
   EventEmitter.call(this);
-  this._window = new NativeWindow(options.width, options.height, options.title);
 
-  if (!this._window) {
-    return;
-  }
-
-  // Event dispatcher
-  this._window.eventHandler(function(raw) {
-    raw.target = this;
-    var objectType = raw.objectType || 'Event';
-    var ev = new (events[objectType])(raw.type, raw);
-
-    // window.on<event> handlers
-    var lower = raw.type.toLowerCase();
-
-    if (typeof this['on' + lower] === 'function') {
-      this[lower](ev);
-    }
-
-    this.emit(raw.type, ev);
-
-    if (raw.type === 'close' && !ev.defaultPrevented) {
-      this.close();
-    }
-
-  }.bind(this));
+  options = options || {};
+  var title = options.title = options.title || 'boosh';
 
   this.addEventListener = this.on;
   this.removeEventListener = this.removeListener;
+
+  this._createNativeWindow(options);
+
 
   Object.defineProperty(this, 'title', {
     set: function(v) {
@@ -76,6 +49,54 @@ function Window(options) {
 }
 
 util.inherits(Window, EventEmitter);
+
+Window.prototype._createNativeWindow = function(options) {
+  options = options || {};
+
+  options.width = options.width || 640;
+  options.height = options.height || 480;
+  options.title = options.title || 'boosh!';
+  options.fullscreen = options.fullscreen || false;
+
+  this._window = new NativeWindow(
+    options.width,
+    options.height,
+    options.title,
+    options.fullscreen
+  );
+
+  if (!this._window) {
+    return;
+  }
+
+  // re-setup the context
+  if (this.context) {
+    this.context.width = this.width;
+    this.context.height = this.height;
+    this._window.setContext2d(this.context);
+  }
+
+  // Event dispatcher
+  this._window.eventHandler(function(raw) {
+    raw.target = this;
+    var objectType = raw.objectType || 'Event';
+    var ev = new (events[objectType])(raw.type, raw);
+
+    // window.on<event> handlers
+    var lower = raw.type.toLowerCase();
+
+    if (typeof this['on' + lower] === 'function') {
+      this[lower](ev);
+    }
+
+    this.emit(raw.type, ev);
+
+    if (raw.type === 'close' && !ev.defaultPrevented) {
+      this.close();
+    }
+
+  }.bind(this));
+}
 
 var windowPrototypeProperty = function(properties, get, set) {
 
@@ -142,6 +163,33 @@ function(v) {
     this.moveTo(rect.x, v);
   }
 });
+
+Window.prototype.fullScreen = false;
+Window.prototype.requestFullScreen = function() {
+  var win = this._window;
+  this._createNativeWindow({
+    width : this.outerWidth,
+    height: this.outerHeight,
+    title: this.title,
+    fullscreen: true
+  });
+  this.fullScreen = true;
+
+  win.close();
+};
+
+Window.prototype.cancelFullScreen = function() {
+  var win = this._window;
+
+  this._createNativeWindow({
+    width: 320,
+    height: 200,
+    title: 'asdf',
+    fullscreen: false
+  });
+  this.fullScreen = false;
+  win.close();
+}
 
 Window.prototype.resizeTo = function(w, h) {
   w = w || 0;
