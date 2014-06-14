@@ -72,7 +72,8 @@
 #define _GLFW_USE_MENUBAR
 
 // Define this to 1 if using OpenGL as the client library
-#define _GLFW_USE_OPENGL
+#define GLFW_INCLUDE_ES2
+
 // Define this to 1 if using OpenGL ES 1.1 as the client library
 /* #undef _GLFW_USE_GLESV1 */
 // Define this to 1 if using OpenGL ES 2.0 as the client library

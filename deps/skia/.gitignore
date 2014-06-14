@@ -1,8 +1,0 @@
-*.swp
-.android_config
-.DS_Store
-.gclient*
-/gyp/build/
-/out/
-/third_party/externals/
-/xcodebuild/
