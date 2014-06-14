@@ -342,7 +342,6 @@ void APIENTRY keyboardKeyCallback(GLFWwindow* window, int key, int scancode, int
     case GLFW_KEY_RIGHT_ALT: key = 18; location=2; break;
     case GLFW_KEY_RIGHT_SUPER: key = 92; location=2; break;
     case GLFW_KEY_MENU: key = 18; break;
-    case GLFW_KEY_LAST: key = 0; break
     case GLFW_KEY_M: key = 0; break;
   }
 
