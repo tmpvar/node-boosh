@@ -117,7 +117,39 @@
             'deps/glfw-support/win'
           ]
         }],
-        ['platform == "linux"', {'variables': {'platform': 'x11'}}],
+        ['platform == "linux"', {
+          'variables': {'platform': 'x11'},
+          'defines' : [
+            '_GLFW_USE_OPENGL',
+            '_GLFW_X11',
+            '_GLFW_GLX',
+            '_GLFW_HAS_GLXGETPROCADDRESSARB', # don't get silly with it.
+          ],
+          'sources': [
+            'deps/glfw/src/glx_context.c',
+            'deps/glfw/src/x11_clipboard.c',
+            'deps/glfw/src/x11_gamma.c',
+            'deps/glfw/src/x11_init.c',
+            'deps/glfw/src/x11_joystick.c',
+            'deps/glfw/src/x11_monitor.c',
+            'deps/glfw/src/x11_platform.h',
+            'deps/glfw/src/x11_time.c',
+            'deps/glfw/src/x11_unicode.c',
+            'deps/glfw/src/x11_window.c',
+          ],
+          'link_settings' : {
+            'libraries' : [
+              '-lGL',
+              '-lGLU',
+              '-lX11',
+              '-lXxf86vm',
+              '-lXrandr',
+              '-lpthread',
+              '-lXi',
+              '-lfreetype'
+            ]
+          }
+        }],
       ],
 
       'include_dirs' : [
