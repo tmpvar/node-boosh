@@ -14,7 +14,11 @@
 #include <node.h>
 #include <context2d.h>
 #include <GL/glew.h>
+
+#ifdef _WIN32
 #include <GL/glu.h>
+#endif
+
 #include <GLFW/glfw3.h>
 
 using namespace v8;
