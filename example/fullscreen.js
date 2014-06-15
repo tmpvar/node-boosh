@@ -1,6 +1,7 @@
 var window = require('../').createWindow({
   width: 800,
-  height: 600
+  height: 600,
+  title: 'fullscreen demo'
 });
 var ctx = window.getContext('2d');
 
@@ -20,8 +21,10 @@ window.addEventListener('keydown', function(ev) {
 window.requestAnimationFrame(function tick() {
   window.requestAnimationFrame(tick);
 
-  ctx.fillStyle = "red"
+  if (window.fullScreen) {
+    ctx.fillStyle = "green"
+  } else {
+    ctx.fillStyle = 'rgba(255, 0, 0, 1)'
+  }
   ctx.fillRect(10, 10, window.innerWidth-20, window.innerHeight-20);
-  ctx.fillStyle = "green"
-  ctx.fillRect(30, 30, 50, 50);
 });

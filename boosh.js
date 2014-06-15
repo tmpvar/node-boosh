@@ -167,9 +167,12 @@ function(v) {
 Window.prototype.fullScreen = false;
 Window.prototype.requestFullScreen = function() {
   var win = this._window;
+
+  this.originalBounds = this._window.getRect();
+
   this._createNativeWindow({
-    width : this.outerWidth,
-    height: this.outerHeight,
+    width : this.originalBounds.width,
+    height: this.originalBounds.height,
     title: this.title,
     fullscreen: true
   });
@@ -181,9 +184,14 @@ Window.prototype.requestFullScreen = function() {
 Window.prototype.cancelFullScreen = function() {
   var win = this._window;
 
+  if (this.originalBounds) {
+    this.outerWidth = this.originalBounds.width;
+    this.outerHeight = this.originalBounds.height;
+  }
+
   this._createNativeWindow({
-    width: 320,
-    height: 200,
+    width: this.outerWidth,
+    height: this.outerHeight,
     title: 'asdf',
     fullscreen: false
   });
