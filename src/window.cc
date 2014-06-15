@@ -567,7 +567,7 @@ void Window::swapBuffers() {
     glBindTexture(GL_TEXTURE_2D, this->surfaceTexture[0]);
 
     void *data = this->ctx->getTextureData();
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, this->width, this->height, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, 3, this->width, this->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
