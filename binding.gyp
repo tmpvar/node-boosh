@@ -3,28 +3,26 @@
     'platform': '<(OS)',
   },
 
-  'includes' : {
-    'node_modules/context2d/context2d.gypi'
-  },
-
   'targets': [
     {
       'target_name': 'boosh',
-      'dependencies' : [
-        'node_modules/glfw3/binding.gyp:glfw3-static',
-        'node_modules/glew/binding.gyp:glew-static',
-        'node_modules/context2d/binding.gyp:context2d-static',
-        'node_modules/node-webgl/binding.gyp:webgl-static'
-      ],
       'sources' : [
         'src/binding.cc',
         'src/window.cc'
       ],
 
+      'libraries': [
+        "<!(node -e \"require('context2d/tools/gyp').static_libraries(true)\")",
+        "../node_modules/glfw3/build/Release/glfw3-static.a",
+        "../node_modules/glew/build/Release/glew-static.a",
+      ],
+
       'include_dirs' : [
-        '<@(shared_include_dirs)',
-        'deps/glfw/include',
+        "<!(node -e \"require('nan')\")",
+        'node_modules/glew/deps/glew/include',
+        'node_modules/glfw3/deps/glfw/include',
         'node_modules/context2d/src',
+        "<!(node -e \"require('context2d/tools/gyp').include_dirs()\")"
       ],
 
       'conditions' : [
@@ -49,7 +47,30 @@
               'AdditionalOptions': [ '/FORCE:MULTIPLE', ]
             }
           }
-        }]
+        }],
+        [ 'OS=="mac"', {
+          'defines': [ '_DARWIN_USE_64_BIT_INODE=1' ],
+          'libraries': [ '-undefined dynamic_lookup' ],
+          'link_settings': {
+            'libraries': [
+              '$(SDKROOT)/System/Library/Frameworks/CoreFoundation.framework',
+              '$(SDKROOT)/System/Library/Frameworks/CoreGraphics.framework',
+              '$(SDKROOT)/System/Library/Frameworks/CoreText.framework',
+              '$(SDKROOT)/System/Library/Frameworks/Foundation.framework',
+              '$(SDKROOT)/System/Library/Frameworks/QuartzCore.framework',
+              '$(SDKROOT)/System/Library/Frameworks/OpenGL.framework',
+              '$(SDKROOT)/System/Library/Frameworks/ImageIO.framework',
+              '$(SDKROOT)/System/Library/Frameworks/ApplicationServices.framework',
+              '$(SDKROOT)/System/Library/Frameworks/Cocoa.framework',
+            ],
+          },
+
+          'xcode_settings': {
+            'DYLIB_INSTALL_NAME_BASE': '@rpath',
+            'MACOSX_DEPLOYMENT_TARGET': '10.7',
+            'OTHER_CFLAGS': ['-stdlib=libc++', '-std=c++11']
+          },
+        }],
       ]
     }
   ]

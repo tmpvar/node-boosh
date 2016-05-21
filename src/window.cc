@@ -3,13 +3,11 @@
 #include "window.h"
 #include <GLFW/glfw3.h>
 
-using namespace v8;
-using namespace node;
 //
 // Event processors
 //
 
-void uv_gui_idler(uv_timer_t* timer, int status) {
+void uv_gui_idler(uv_timer_t* timer) {
   glfwPollEvents();
 }
 
@@ -24,25 +22,26 @@ void APIENTRY refreshCallback(GLFWwindow* window) {
 }
 
 void APIENTRY resizedCallback(GLFWwindow* window,int width,int height) {
-
   Window *win = (Window *)glfwGetWindowUserPointer(window);
 
   if (!win->handle) {
     return;
   }
 
-  Local<Object> event = Object::New();
-  event->Set(String::NewSymbol("type"), String::NewSymbol("resize"));
-  event->Set(String::NewSymbol("objectType"), String::NewSymbol("Event"));
-  event->Set(String::NewSymbol("width"), Number::New(width));
-  event->Set(String::NewSymbol("height"), Number::New(height));
-  event->Set(String::NewSymbol("_defaultPrevented"), Boolean::New(false));
+  Nan::HandleScope scope;
+
+  v8::Local<v8::Object> event = Nan::New<v8::Object>();
+  event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("resize").ToLocalChecked());
+  event->Set(Nan::New<v8::String>("objectType").ToLocalChecked(), Nan::New<v8::String>("Event").ToLocalChecked());
+  event->Set(Nan::New<v8::String>("width").ToLocalChecked(), Nan::New<v8::Number>(width));
+  event->Set(Nan::New<v8::String>("height").ToLocalChecked(), Nan::New<v8::Number>(height));
+  event->Set(Nan::New<v8::String>("_defaultPrevented").ToLocalChecked(), Nan::New<v8::Boolean>(false));
 
   const unsigned argc = 1;
-  Local<Value> argv[argc] = { event };
-  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+  v8::Local<v8::Value> argv[argc] = { event };
+  win->eventCallback->Call(argc, argv);
 
-  if (!event->Get(String::NewSymbol("_defaultPrevented"))->BooleanValue()) {
+  if (!event->Get(Nan::New<v8::String>("_defaultPrevented").ToLocalChecked())->BooleanValue()) {
     win->width = width;
     win->height = height;
     win->setupSize();
@@ -53,25 +52,26 @@ void APIENTRY resizedCallback(GLFWwindow* window,int width,int height) {
 }
 
 void APIENTRY movedCallback(GLFWwindow* window,int x,int y) {
-
   Window *win = (Window *)glfwGetWindowUserPointer(window);
 
   if (!win->handle) {
     return;
   }
 
-  Local<Object> event = Object::New();
-  event->Set(String::NewSymbol("type"), String::NewSymbol("move"));
-  event->Set(String::NewSymbol("objectType"), String::NewSymbol("Event"));
-  event->Set(String::NewSymbol("x"), Number::New(x));
-  event->Set(String::NewSymbol("y"), Number::New(y));
-  event->Set(String::NewSymbol("_defaultPrevented"), Boolean::New(false));
+  Nan::HandleScope scope;
+
+  v8::Local<v8::Object> event = Nan::New<v8::Object>();
+  event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("move").ToLocalChecked());
+  event->Set(Nan::New<v8::String>("objectType").ToLocalChecked(), Nan::New<v8::String>("Event").ToLocalChecked());
+  event->Set(Nan::New<v8::String>("x").ToLocalChecked(), Nan::New<v8::Number>(x));
+  event->Set(Nan::New<v8::String>("y").ToLocalChecked(), Nan::New<v8::Number>(y));
+  event->Set(Nan::New<v8::String>("_defaultPrevented").ToLocalChecked(), Nan::New<v8::Boolean>(false));
 
   const unsigned argc = 1;
-  Local<Value> argv[argc] = { event };
-  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+  v8::Local<v8::Value> argv[argc] = { event };
+  win->eventCallback->Call(argc, argv);
 
-  if (!event->Get(String::NewSymbol("_defaultPrevented"))->BooleanValue()) {
+  if (!event->Get(Nan::New<v8::String>("_defaultPrevented").ToLocalChecked())->BooleanValue()) {
     win->x = x;
     win->y = y;
   } else {
@@ -81,6 +81,7 @@ void APIENTRY movedCallback(GLFWwindow* window,int x,int y) {
 
 
 void APIENTRY closeCallback(GLFWwindow* window) {
+  Nan::HandleScope scope;
 
   Window *win = (Window *)glfwGetWindowUserPointer(window);
 
@@ -88,16 +89,16 @@ void APIENTRY closeCallback(GLFWwindow* window) {
     return;
   }
 
-  Local<Object> event = Object::New();
-  event->Set(String::NewSymbol("objectType"), String::NewSymbol("Event"));
-  event->Set(String::NewSymbol("type"), String::NewSymbol("close"));
-  event->Set(String::NewSymbol("_defaultPrevented"), Boolean::New(false));
+  v8::Local<v8::Object> event = Nan::New<v8::Object>();
+  event->Set(Nan::New<v8::String>("objectType").ToLocalChecked(), Nan::New<v8::String>("Event").ToLocalChecked());
+  event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("close").ToLocalChecked());
+  event->Set(Nan::New<v8::String>("_defaultPrevented").ToLocalChecked(), Nan::New<v8::Boolean>(false));
 
   const unsigned argc = 1;
-  Local<Value> argv[argc] = { event };
-  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+  v8::Local<v8::Value> argv[argc] = { event };
+  win->eventCallback->Call(argc, argv);
 
-  bool closePrevented = event->Get(String::NewSymbol("_defaultPrevented"))->BooleanValue();
+  bool closePrevented = event->Get(Nan::New<v8::String>("_defaultPrevented").ToLocalChecked())->BooleanValue();
 
   if (!closePrevented) {
     win->destroy();
@@ -106,151 +107,155 @@ void APIENTRY closeCallback(GLFWwindow* window) {
 
 
 void APIENTRY focusCallback(GLFWwindow* window, int hasFocus) {
-
   Window *win = (Window *)glfwGetWindowUserPointer(window);
 
   if (!win->handle) {
     return;
   }
 
-  Local<Object> event = Object::New();
-  event->Set(String::NewSymbol("objectType"), String::NewSymbol("Event"));
+  Nan::HandleScope scope;
+
+  v8::Local<v8::Object> event = Nan::New<v8::Object>();
+  event->Set(Nan::New<v8::String>("objectType").ToLocalChecked(), Nan::New<v8::String>("Event").ToLocalChecked());
   if (hasFocus) {
-    event->Set(String::NewSymbol("type"), String::NewSymbol("focus"));
+    event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("focus").ToLocalChecked());
   } else {
-    event->Set(String::NewSymbol("type"), String::NewSymbol("blur"));
+    event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("blur").ToLocalChecked());
   }
 
   const unsigned argc = 1;
-  Local<Value> argv[argc] = { event };
-  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+  v8::Local<v8::Value> argv[argc] = { event };
+  win->eventCallback->Call(argc, argv);
 };
 
 void APIENTRY mouseMoveCallback(GLFWwindow* window, double x, double y) {
-
   Window *win = (Window *)glfwGetWindowUserPointer(window);
 
   if (!win->handle) {
     return;
   }
 
-  Local<Object> event = Object::New();
-  event->Set(String::NewSymbol("type"), String::NewSymbol("mousemove"));
-  event->Set(String::NewSymbol("objectType"), String::NewSymbol("MouseEvent"));
-  event->Set(String::NewSymbol("x"), Number::New(x));
-  event->Set(String::NewSymbol("y"), Number::New(y));
+  Nan::HandleScope scope;
+  v8::Local<v8::Object> event = Nan::New<v8::Object>();
+  event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("mousemove").ToLocalChecked());
+  event->Set(Nan::New<v8::String>("objectType").ToLocalChecked(), Nan::New<v8::String>("MouseEvent").ToLocalChecked());
+  event->Set(Nan::New<v8::String>("x").ToLocalChecked(), Nan::New<v8::Number>(x));
+  event->Set(Nan::New<v8::String>("y").ToLocalChecked(), Nan::New<v8::Number>(y));
 
 
   const unsigned argc = 1;
-  Local<Value> argv[argc] = { event };
-  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+  v8::Local<v8::Value> argv[argc] = { event };
+
+  win->eventCallback->Call(argc, argv);
 };
 
 void APIENTRY mouseEnterExitCallback(GLFWwindow* window, int inside) {
-
   Window *win = (Window *)glfwGetWindowUserPointer(window);
 
   if (!win->handle) {
     return;
   }
 
-  Local<Object> event = Object::New();
+  Nan::HandleScope scope;
+
+  v8::Local<v8::Object> event = Nan::New<v8::Object>();
 
   if (inside) {
-    event->Set(String::NewSymbol("type"), String::NewSymbol("mouseenter"));
+    event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("mouseenter").ToLocalChecked());
   } else {
-    event->Set(String::NewSymbol("type"), String::NewSymbol("mouseleave"));
+    event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("mouseleave").ToLocalChecked());
   }
-  event->Set(String::NewSymbol("objectType"), String::NewSymbol("MouseEvent"));
+  event->Set(Nan::New<v8::String>("objectType").ToLocalChecked(), Nan::New<v8::String>("MouseEvent").ToLocalChecked());
 
   double x, y;
   glfwGetCursorPos(win->handle, &x, &y);
-  event->Set(String::NewSymbol("x"), Number::New(x));
-  event->Set(String::NewSymbol("y"), Number::New(y));
+  event->Set(Nan::New<v8::String>("x").ToLocalChecked(), Nan::New<v8::Number>(x));
+  event->Set(Nan::New<v8::String>("y").ToLocalChecked(), Nan::New<v8::Number>(y));
 
   const unsigned argc = 1;
-  Local<Value> argv[argc] = { event };
-  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+  v8::Local<v8::Value> argv[argc] = { event };
+  win->eventCallback->Call(argc, argv);
 };
 
-
 void APIENTRY mouseButtonCallback(GLFWwindow* window, int button, int pressed, int mods) {
-
   Window *win = (Window *)glfwGetWindowUserPointer(window);
 
   if (!win->handle) {
     return;
   }
 
-  Local<Object> event = Object::New();
+  Nan::HandleScope scope;
+
+  v8::Local<v8::Object> event = Nan::New<v8::Object>();
 
   switch (pressed) {
     case GLFW_PRESS:
-      event->Set(String::NewSymbol("type"), String::NewSymbol("mousedown"));
+      event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("mousedown").ToLocalChecked());
     break;
 
     case GLFW_RELEASE:
-      event->Set(String::NewSymbol("type"), String::NewSymbol("mouseup"));
+      event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("mouseup").ToLocalChecked());
     break;
   }
 
   switch (button) {
     // left
     case GLFW_MOUSE_BUTTON_1:
-      event->Set(String::NewSymbol("button"), Number::New(0));
+      event->Set(Nan::New<v8::String>("button").ToLocalChecked(), Nan::New<v8::Number>(0));
     break;
 
     // middle
     case GLFW_MOUSE_BUTTON_3:
-      event->Set(String::NewSymbol("button"), Number::New(1));
+      event->Set(Nan::New<v8::String>("button").ToLocalChecked(), Nan::New<v8::Number>(1));
     break;
 
     // right
     case GLFW_MOUSE_BUTTON_2:
-      event->Set(String::NewSymbol("button"), Number::New(2));
+      event->Set(Nan::New<v8::String>("button").ToLocalChecked(), Nan::New<v8::Number>(2));
     break;
 
     // handle the other buttons
     default:
-      event->Set(String::NewSymbol("button"), Number::New(button));
+      event->Set(Nan::New<v8::String>("button").ToLocalChecked(), Nan::New<v8::Number>(button));
     break;
   }
 
-  event->Set(String::NewSymbol("objectType"), String::NewSymbol("MouseEvent"));
+  event->Set(Nan::New<v8::String>("objectType").ToLocalChecked(), Nan::New<v8::String>("MouseEvent").ToLocalChecked());
 
   double x, y;
   glfwGetCursorPos(win->handle, &x, &y);
-  event->Set(String::NewSymbol("x"), Number::New(x));
-  event->Set(String::NewSymbol("y"), Number::New(y));
+  event->Set(Nan::New<v8::String>("x").ToLocalChecked(), Nan::New<v8::Number>(x));
+  event->Set(Nan::New<v8::String>("y").ToLocalChecked(), Nan::New<v8::Number>(y));
 
   const unsigned argc = 1;
-  Local<Value> argv[argc] = { event };
-  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+  v8::Local<v8::Value> argv[argc] = { event };
+  win->eventCallback->Call(argc, argv);
 };
 
 void APIENTRY keyboardKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-
   Window *win = (Window *)glfwGetWindowUserPointer(window);
 
   if (!win->handle || key == GLFW_KEY_RIGHT_SHIFT || key == GLFW_KEY_LEFT_SHIFT) {
     return;
   }
 
-  Local<Object> event = Object::New();
+  Nan::HandleScope scope;
+
+  v8::Local<v8::Object> event = Nan::New<v8::Object>();
 
   bool repeat = false;
 
   switch (action) {
     case GLFW_PRESS:
-      event->Set(String::NewSymbol("type"), String::NewSymbol("keydown"));
+      event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("keydown").ToLocalChecked());
     break;
 
     case GLFW_RELEASE:
-      event->Set(String::NewSymbol("type"), String::NewSymbol("keyup"));
+      event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("keyup").ToLocalChecked());
     break;
 
     case GLFW_REPEAT:
-      event->Set(String::NewSymbol("type"), String::NewSymbol("keydown"));
+      event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("keydown").ToLocalChecked());
       repeat = true;
     break;
   }
@@ -345,31 +350,29 @@ void APIENTRY keyboardKeyCallback(GLFWwindow* window, int key, int scancode, int
     case GLFW_KEY_M: key = 0; break;
   }
 
-  event->Set(String::NewSymbol("keyCode"), Integer::New(key));
-  event->Set(String::NewSymbol("which"), Integer::New(key));
-  // event->Set(String::NewSymbol("keyIdentifier"), glfw);
+  event->Set(Nan::New<v8::String>("keyCode").ToLocalChecked(), Nan::New<v8::Integer>(key));
+  event->Set(Nan::New<v8::String>("which").ToLocalChecked(), Nan::New<v8::Integer>(key));
+  // event->Set(Nan::New<v8::String>("keyIdentifier").ToLocalChecked(), glfw);
 
-  event->Set(String::NewSymbol("ctrlKey"), Boolean::New(control));
-  event->Set(String::NewSymbol("shiftKey"), Boolean::New(shift));
-  event->Set(String::NewSymbol("altKey"), Boolean::New(alt));
-  event->Set(String::NewSymbol("metaKey"), Boolean::New(meta));
-  event->Set(String::NewSymbol("repeat"), Boolean::New(repeat));
-  event->Set(String::NewSymbol("location"), Integer::New(location));
+  event->Set(Nan::New<v8::String>("ctrlKey").ToLocalChecked(), Nan::New<v8::Boolean>(control));
+  event->Set(Nan::New<v8::String>("shiftKey").ToLocalChecked(), Nan::New<v8::Boolean>(shift));
+  event->Set(Nan::New<v8::String>("altKey").ToLocalChecked(), Nan::New<v8::Boolean>(alt));
+  event->Set(Nan::New<v8::String>("metaKey").ToLocalChecked(), Nan::New<v8::Boolean>(meta));
+  event->Set(Nan::New<v8::String>("repeat").ToLocalChecked(), Nan::New<v8::Boolean>(repeat));
+  event->Set(Nan::New<v8::String>("location").ToLocalChecked(), Nan::New<v8::Integer>(location));
 
-  event->Set(String::NewSymbol("objectType"), String::NewSymbol("KeyboardEvent"));
+  event->Set(Nan::New<v8::String>("objectType").ToLocalChecked(), Nan::New<v8::String>("KeyboardEvent").ToLocalChecked());
 
   const unsigned argc = 1;
-  Local<Value> argv[argc] = { event };
-  win->eventCallback->Call(Context::GetCurrent()->Global(), argc, argv);
+  v8::Local<v8::Value> argv[argc] = { event };
+  win->eventCallback->Call(argc, argv);
 };
 
 
 uv_timer_t * Window::input_timer = NULL;
 int Window::window_count = 0;
 
-Window::Window(int width, int height, const char *title, bool fullscreen)
-  : ObjectWrap()
-{
+Window::Window(int width, int height, const char *title, bool fullscreen) {
   this->width = width;
   this->height = height;
 
@@ -428,68 +431,32 @@ void Window::destroy() {
   if (Window::window_count <= 0) {
     uv_timer_stop(Window::input_timer);
   }
-
 }
 
-Persistent<Function> Window::constructor;
+NAN_METHOD(Window::EventHandler) {
+  Window *win = ObjectWrap::Unwrap<Window>(info.This());
 
-void Window::Init(Handle<Object> exports) {
-
-  Local<FunctionTemplate> tpl = FunctionTemplate::New(New);
-  tpl->SetClassName(String::NewSymbol("Window"));
-  tpl->InstanceTemplate()->SetInternalFieldCount(1);
-
-  NODE_PROTOTYPE_METHOD(resizeTo);
-  NODE_PROTOTYPE_METHOD(moveTo);
-  NODE_PROTOTYPE_METHOD(getRect);
-
-  NODE_PROTOTYPE_METHOD(setContext2d);
-  NODE_PROTOTYPE_METHOD(flush);
-
-  NODE_PROTOTYPE_METHOD(eventHandler);
-  NODE_PROTOTYPE_METHOD(setTitle);
-  NODE_PROTOTYPE_METHOD(close);
-
-
-  Persistent<Function> constructor = Persistent<Function>::New(tpl->GetFunction());
-  exports->Set(String::NewSymbol("Window"), constructor);
-
-}
-
-Handle<Value> Window::eventHandler(const Arguments& args) {
-  HandleScope scope;
-
-  Window *win = ObjectWrap::Unwrap<Window>(args.This());
-
-  win->eventCallback = Persistent<Function>::New(Handle<Function>::Cast(args[0]));
-
-  return scope.Close(Undefined());
+  win->eventCallback = new Nan::Callback(info[0].As<v8::Function>());
 }
 
 
-Handle<Value> Window::setTitle(const Arguments& args) {
-  HandleScope scope;
-  Window *win = ObjectWrap::Unwrap<Window>(args.This());
+NAN_METHOD(Window::SetTitle) {
+  Window *win = ObjectWrap::Unwrap<Window>(info.This());
 
-  String::Utf8Value title(args[0]->ToString());
+  v8::String::Utf8Value title(info[0]->ToString());
   if (win->handle) {
     glfwSetWindowTitle(win->handle, *title);
   }
-
-  return scope.Close(Undefined());
 }
 
-Handle<Value> Window::close(const Arguments& args) {
-  HandleScope scope;
-  Window *win = ObjectWrap::Unwrap<Window>(args.This());
+NAN_METHOD(Window::Close) {
+  Window *win = ObjectWrap::Unwrap<Window>(info.This());
 
   if (win->handle) {
     glfwSetWindowShouldClose(win->handle, 1);
 
     win->destroy();
   }
-
-  return scope.Close(Undefined());
 }
 
 void Window::setupSize() {
@@ -507,13 +474,11 @@ void Window::setupSize() {
   }
 }
 
-Handle<Value> Window::setContext2d(const Arguments& args) {
-  HandleScope scope;
-
-  Window *win = ObjectWrap::Unwrap<Window>(args.This());
+NAN_METHOD(Window::SetContext2d) {
+  Window *win = ObjectWrap::Unwrap<Window>(info.This());
 
   if (win->handle) {
-    win->ctx = ObjectWrap::Unwrap<Context2D>(args[0]->ToObject());
+    win->ctx = ObjectWrap::Unwrap<Context2D>(info[0]->ToObject());
     win->setupSize();
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.5f);
@@ -523,41 +488,30 @@ Handle<Value> Window::setContext2d(const Arguments& args) {
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
 
   }
-  return scope.Close(Undefined());
 }
 
+NAN_METHOD(Window::ResizeTo) {
+  Window *win = ObjectWrap::Unwrap<Window>(info.This());
 
-
-Handle<Value> Window::resizeTo(const Arguments& args) {
-  HandleScope scope;
-
-  Window *win = ObjectWrap::Unwrap<Window>(args.This());
-
-  win->width = args[0]->Int32Value();
-  win->height = args[1]->Int32Value();
+  win->width = info[0]->Int32Value();
+  win->height = info[1]->Int32Value();
 
   if (win->handle) {
     glfwSetWindowSize(win->handle, win->width, win->height);
   }
 
   win->setupSize();
-
-  return scope.Close(Undefined());
 }
 
-Handle<Value> Window::moveTo(const Arguments& args) {
-  HandleScope scope;
+NAN_METHOD(Window::MoveTo) {
+  Window *win = ObjectWrap::Unwrap<Window>(info.This());
 
-  Window *win = ObjectWrap::Unwrap<Window>(args.This());
-
-  win->x = args[0]->Int32Value();
-  win->y = args[1]->Int32Value();
+  win->x = info[0]->Int32Value();
+  win->y = info[1]->Int32Value();
 
   if (win->handle) {
     glfwSetWindowPos(win->handle, win->x, win->y);
   }
-
-  return scope.Close(Undefined());
 }
 
 void Window::swapBuffers() {
@@ -596,50 +550,41 @@ void Window::swapBuffers() {
   }
 }
 
-Handle<Value> Window::flush(const Arguments& args) {
-  HandleScope scope;
-  Window *win = ObjectWrap::Unwrap<Window>(args.This());
+NAN_METHOD(Window::Flush) {
+  Window *win = ObjectWrap::Unwrap<Window>(info.This());
   win->swapBuffers();
-  return scope.Close(Undefined());
 }
 
-Handle<Value> Window::getRect(const Arguments& args) {
-  HandleScope scope;
-
-  Window *win = ObjectWrap::Unwrap<Window>(args.This());
+NAN_METHOD(Window::GetRect) {
+  Window *win = ObjectWrap::Unwrap<Window>(info.This());
   if (win->handle) {
     int width, height, x, y;
     glfwGetWindowSize(win->handle, &width, &height);
     glfwGetWindowPos(win->handle, &x, &y);
 
-    Local<Object> ret = Object::New();
-    ret->Set(String::NewSymbol("x"), Number::New(x));
-    ret->Set(String::NewSymbol("y"), Number::New(y));
-    ret->Set(String::NewSymbol("width"), Number::New(width));
-    ret->Set(String::NewSymbol("height"), Number::New(height));
+    v8::Local<v8::Object> ret = Nan::New<v8::Object>();
+    ret->Set(Nan::New<v8::String>("x").ToLocalChecked(), Nan::New<v8::Number>(x));
+    ret->Set(Nan::New<v8::String>("y").ToLocalChecked(), Nan::New<v8::Number>(y));
+    ret->Set(Nan::New<v8::String>("width").ToLocalChecked(), Nan::New<v8::Number>(width));
+    ret->Set(Nan::New<v8::String>("height").ToLocalChecked(), Nan::New<v8::Number>(height));
 
-    return scope.Close(ret);
-  } else {
-    return scope.Close(Undefined());
+    info.GetReturnValue().Set(ret);
   }
 }
 
+NAN_METHOD(Window::New) {
+  int width = info[0]->Int32Value();
+  int height = info[1]->Int32Value();
 
-Handle<Value> Window::New(const Arguments& args) {
-  HandleScope scope;
-
-  int width = args[0]->Int32Value();
-  int height = args[1]->Int32Value();
-
-  String::Utf8Value titleString(args[2]->ToString());
+  v8::String::Utf8Value titleString(info[2]->ToString());
 
   Window *window = new Window(
     width,
     height,
     *titleString,
-    args[3]->BooleanValue()
+    info[3]->BooleanValue()
   );
-  window->Wrap(args.This());
+  window->Wrap(info.Holder());
 
-  return args.This();
+  info.GetReturnValue().Set(info.Holder());
 }

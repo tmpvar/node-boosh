@@ -9,11 +9,11 @@
 using namespace v8;
 using namespace node;
 
-void init(Handle<Object> exports) {
+NAN_MODULE_INIT(init) {
   assert(glfwInit());
 
-  Window::Init(exports);
-  Context2D::Init(exports);
+  Window::Init(target);
+  Context2D::Init(target);
 
 }
 
