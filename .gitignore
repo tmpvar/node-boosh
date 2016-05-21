@@ -4,3 +4,4 @@ deps/glfw/build.ninja
 deps/glfw/docs/warnings.txt
 deps/glfw/rules.ninja
 build
+npm-debug.log
