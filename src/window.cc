@@ -1,7 +1,7 @@
 #include <node.h>
+#include <stdio.h>
 
 #include "window.h"
-#include <GLFW/glfw3.h>
 
 //
 // Event processors
@@ -18,7 +18,16 @@ void APIENTRY refreshCallback(GLFWwindow* window) {
     return;
   }
 
-  win->swapBuffers();
+  Nan::HandleScope scope;
+
+  v8::Local<v8::Object> event = Nan::New<v8::Object>();
+  event->Set(Nan::New<v8::String>("type").ToLocalChecked(), Nan::New<v8::String>("refresh").ToLocalChecked());
+  event->Set(Nan::New<v8::String>("objectType").ToLocalChecked(), Nan::New<v8::String>("Event").ToLocalChecked());
+  event->Set(Nan::New<v8::String>("_defaultPrevented").ToLocalChecked(), Nan::New<v8::Boolean>(false));
+
+  const unsigned argc = 1;
+  v8::Local<v8::Value> argv[argc] = { event };
+  win->eventCallback->Call(argc, argv);
 }
 
 void APIENTRY resizedCallback(GLFWwindow* window,int width,int height) {
@@ -79,7 +88,6 @@ void APIENTRY movedCallback(GLFWwindow* window,int x,int y) {
   }
 };
 
-
 void APIENTRY closeCallback(GLFWwindow* window) {
   Nan::HandleScope scope;
 
@@ -104,7 +112,6 @@ void APIENTRY closeCallback(GLFWwindow* window) {
     win->destroy();
   }
 };
-
 
 void APIENTRY focusCallback(GLFWwindow* window, int hasFocus) {
   Window *win = (Window *)glfwGetWindowUserPointer(window);
@@ -368,13 +375,22 @@ void APIENTRY keyboardKeyCallback(GLFWwindow* window, int key, int scancode, int
   win->eventCallback->Call(argc, argv);
 };
 
-
 uv_timer_t * Window::input_timer = NULL;
 int Window::window_count = 0;
 
 Window::Window(int width, int height, const char *title, bool fullscreen) {
+  this->frameStarted = false;
   this->width = width;
   this->height = height;
+
+  #ifndef _WIN32 // don't require this on win32, and works with more cards
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+  #endif
+
+  glfwWindowHint(GLFW_SAMPLES, 4);
 
   this->handle = glfwCreateWindow(
     width,
@@ -386,6 +402,16 @@ Window::Window(int width, int height, const char *title, bool fullscreen) {
 
   Window::window_count++;
 
+  glfwMakeContextCurrent(this->handle);
+  glfwSwapInterval(0);
+
+  // create the nanovg gl context
+  glewExperimental = GL_TRUE;
+  if(glewInit() != GLEW_OK) {
+    printf("Could not init glew.\n");
+  }
+  glGetError();
+
   glfwGetWindowPos(this->handle, &this->x, &this->y);
 
   glfwSetWindowUserPointer(this->handle, this);
@@ -395,6 +421,7 @@ Window::Window(int width, int height, const char *title, bool fullscreen) {
   glfwSetWindowCloseCallback(this->handle, &closeCallback);
   glfwSetWindowFocusCallback(this->handle, &focusCallback);
   glfwSetMouseButtonCallback(this->handle, &mouseButtonCallback);
+  glfwSetWindowRefreshCallback(this->handle, &refreshCallback);
   // Mouse
   glfwSetCursorPosCallback(this->handle, &mouseMoveCallback);
   glfwSetCursorEnterCallback(this->handle, &mouseEnterExitCallback);
@@ -470,23 +497,6 @@ void Window::setupSize() {
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    this->ctx->resizeCanvas(this->width, this->height);
-  }
-}
-
-NAN_METHOD(Window::SetContext2d) {
-  Window *win = ObjectWrap::Unwrap<Window>(info.This());
-
-  if (win->handle) {
-    win->ctx = ObjectWrap::Unwrap<Context2D>(info[0]->ToObject());
-    win->setupSize();
-
-    glClearColor(0.0f, 0.0f, 0.0f, 0.5f);
-    glClearDepth(1.0f);
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
-
   }
 }
 
@@ -515,58 +525,58 @@ NAN_METHOD(Window::MoveTo) {
 }
 
 void Window::swapBuffers() {
-  if (this->handle) {
-    glfwMakeContextCurrent(this->handle);
-
-    glBindTexture(GL_TEXTURE_2D, this->surfaceTexture[0]);
-
-    void *data = this->ctx->getTextureData();
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, this->width, this->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR);
-
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glLoadIdentity();
-
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, this->surfaceTexture[0]);
-    glMatrixMode(GL_TEXTURE);
-    glLoadIdentity();
-    glScalef(1.0f, -1.0f, 1.0f);
-    glMatrixMode(GL_MODELVIEW);
-
-    glBegin(GL_QUADS);
-      glTexCoord2f(0.0f, 0.0f); glVertex3f( 0.0f, 0.0f,  0);
-      glTexCoord2f(1.0f, 0.0f); glVertex3f( (float)this->width, 0.0f,  0);
-      glTexCoord2f(1.0f, 1.0f); glVertex3f( (float)this->width,  (float)this->height,  0);
-      glTexCoord2f(0.0f, 1.0f); glVertex3f( 0.0f, (float)this->height,  0);
-    glEnd();
-
-    if (this->handle) {
-      glfwSwapBuffers(this->handle);
-    }
-    glDeleteTextures(1, &this->surfaceTexture[0]);
-  }
+  glfwSwapBuffers(this->handle);
 }
 
-NAN_METHOD(Window::Flush) {
+NAN_METHOD(Window::BeginFrame) {
   Window *win = ObjectWrap::Unwrap<Window>(info.This());
+
+  glfwMakeContextCurrent(win->handle);
+  int fbWidth, fbHeight;
+
+  glfwGetFramebufferSize(win->handle, &fbWidth, &fbHeight);
+
+  // Update and render
+  glViewport(0, 0, fbWidth, fbHeight);
+  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
+}
+
+NAN_METHOD(Window::EndFrame) {
+  Window *win = ObjectWrap::Unwrap<Window>(info.This());
+
+  // nvgBeginFrame(win->vg, winWidth, winHeight, pxRatio);
+
+  //   nvgBeginPath(win->vg);
+  //     nvgRect(win->vg, 200,200, 120,30);
+  //     nvgFillColor(win->vg, nvgRGBA(255,192,0,255));
+  //     nvgFill(win->vg);
+
+  //   nvgBeginPath(win->vg);
+  //     nvgRect(win->vg, 100,100, 120,30);
+  //     nvgCircle(win->vg, 120,120, 5);
+  //     nvgPathWinding(win->vg, NVG_HOLE);   // Mark circle as a hole.
+  //     nvgFillColor(win->vg, nvgRGBA(255,192,0,255));
+  //     nvgFill(win->vg);
+  // nvgEndFrame(win->vg);
+
   win->swapBuffers();
 }
 
 NAN_METHOD(Window::GetRect) {
   Window *win = ObjectWrap::Unwrap<Window>(info.This());
   if (win->handle) {
-    int width, height, x, y;
+    int width, height, x, y, fbWidth, fbHeight;
     glfwGetWindowSize(win->handle, &width, &height);
     glfwGetWindowPos(win->handle, &x, &y);
+    glfwGetFramebufferSize(win->handle, &fbWidth, &fbHeight);
 
     v8::Local<v8::Object> ret = Nan::New<v8::Object>();
     ret->Set(Nan::New<v8::String>("x").ToLocalChecked(), Nan::New<v8::Number>(x));
     ret->Set(Nan::New<v8::String>("y").ToLocalChecked(), Nan::New<v8::Number>(y));
     ret->Set(Nan::New<v8::String>("width").ToLocalChecked(), Nan::New<v8::Number>(width));
     ret->Set(Nan::New<v8::String>("height").ToLocalChecked(), Nan::New<v8::Number>(height));
+    ret->Set(Nan::New<v8::String>("fbWidth").ToLocalChecked(), Nan::New<v8::Number>(fbWidth));
+    ret->Set(Nan::New<v8::String>("fbHeight").ToLocalChecked(), Nan::New<v8::Number>(fbHeight));
 
     info.GetReturnValue().Set(ret);
   }

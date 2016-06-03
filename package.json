@@ -12,6 +12,7 @@
     "context2d-skia": "git+https://github.com/tmpvar/context2d-skia.git",
     "glew": "^1.0.1",
     "glfw3": "^1.0.0",
+    "mkdirp": "^0.5.1",
     "nan": "^2.3.3"
   },
   "scripts": {

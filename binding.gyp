@@ -8,11 +8,12 @@
       'target_name': 'boosh',
       'sources' : [
         'src/binding.cc',
-        'src/window.cc'
+        'src/window.cc',
+        'src/node-nanovg.cc',
+        'deps/nanovg/src/nanovg.c'
       ],
 
       'libraries': [
-        "<!(node -e \"require('context2d/tools/gyp').static_libraries(true)\")",
         "../node_modules/glfw3/build/Release/glfw3-static.a",
         "../node_modules/glew/build/Release/glew-static.a",
       ],
@@ -21,8 +22,8 @@
         "<!(node -e \"require('nan')\")",
         'node_modules/glew/deps/glew/include',
         'node_modules/glfw3/deps/glfw/include',
-        'node_modules/context2d/src',
-        "<!(node -e \"require('context2d/tools/gyp').include_dirs()\")"
+        'deps/nanovg/src/',
+        'src'
       ],
 
       'conditions' : [
@@ -68,7 +69,7 @@
           'xcode_settings': {
             'DYLIB_INSTALL_NAME_BASE': '@rpath',
             'MACOSX_DEPLOYMENT_TARGET': '10.7',
-            'OTHER_CFLAGS': ['-stdlib=libc++', '-std=c++11']
+            'OTHER_CFLAGS': ['-stdlib=libc++']
           },
         }],
       ]

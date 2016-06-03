@@ -1,7 +1,7 @@
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 var binding = require('bindings')('boosh');
-var context2d = require('context2d');
+// var context2d = require('context2d');
 var fs = require('fs');
 var NativeWindow = binding.Window;
 var AnimationFrame = require('animationframe');
@@ -32,9 +32,7 @@ function Window(options) {
   });
 
   var manager = new AnimationFrame(function() {
-    if (this.context && this.context.dirty) {
-      this._window.flush();
-    }
+    this._window.flush();
   }.bind(this));
 
   this.requestAnimationFrame = manager.requestAnimationFrame;
@@ -73,7 +71,7 @@ Window.prototype._createNativeWindow = function(options) {
   if (this.context) {
     this.context.width = this.width;
     this.context.height = this.height;
-    this._window.setContext2d(this.context);
+    // this._window.setContext2d(this.context);
   }
 
   // Event dispatcher
@@ -235,8 +233,8 @@ Window.prototype.getContext = function(type) {
   }
 
   if (type === '2d') {
-    this.context = context2d.createContext(this, this.width, this.height, binding.Context2D);
-    this._window.setContext2d(this.context);
+    // this.context = context2d.createContext(this, this.width, this.height, binding.Context2D);
+    // this._window.setContext2d(this.context);
     return this.context;
   }
   this.context = this.canvas.getContext(type);

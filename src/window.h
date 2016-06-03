@@ -1,31 +1,30 @@
 #ifndef WINDOW_H
 #define WINDOW_H
 
+#include <node.h>
 #include <nan.h>
+#include <uv.h>
 
 #define GLFW_INCLUDE_GLU 1
 
-#include <node.h>
-#include <context2d.h>
 #include <GL/glew.h>
+#include <GLFW/glfw3.h>
 
 #ifdef _WIN32
 #include <GL/glu.h>
 #endif
 
-#include <GLFW/glfw3.h>
-
 class Window : public Nan::ObjectWrap {
  public:
   static v8::Handle<v8::Value> NewInstance(const Nan::FunctionCallbackInfo<v8::Value>& info);
 
-  Context2D *ctx;
   v8::Handle<v8::Object> canvasHandle;
   GLFWwindow *handle;
   int width, height, x, y;
   GLuint surfaceTexture[1];
   Nan::Callback *eventCallback;
   bool hasEventHandler;
+  bool frameStarted;
   void setupSize();
   void destroy();
   void swapBuffers();
@@ -38,8 +37,8 @@ class Window : public Nan::ObjectWrap {
     Nan::SetPrototypeMethod(tpl, "resizeTo", ResizeTo);
     Nan::SetPrototypeMethod(tpl, "moveTo", MoveTo);
     Nan::SetPrototypeMethod(tpl, "getRect", GetRect);
-    Nan::SetPrototypeMethod(tpl, "setContext2d", SetContext2d);
-    Nan::SetPrototypeMethod(tpl, "flush", Flush);
+    Nan::SetPrototypeMethod(tpl, "beginFrame", BeginFrame);
+    Nan::SetPrototypeMethod(tpl, "endFrame", EndFrame);
     Nan::SetPrototypeMethod(tpl, "eventHandler", EventHandler);
     Nan::SetPrototypeMethod(tpl, "setTitle", SetTitle);
     Nan::SetPrototypeMethod(tpl, "close", Close);
@@ -63,7 +62,8 @@ class Window : public Nan::ObjectWrap {
   static NAN_METHOD(MoveTo);
   static NAN_METHOD(GetRect);
   static NAN_METHOD(SetContext2d);
-  static NAN_METHOD(Flush);
+  static NAN_METHOD(BeginFrame);
+  static NAN_METHOD(EndFrame);
   static NAN_METHOD(EventHandler);
   static NAN_METHOD(SetTitle);
   static NAN_METHOD(Close);
